@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-std=c23, -Isrc, -O2, -Wall, -Wextra]

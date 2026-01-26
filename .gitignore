@@ -25,7 +25,3 @@ bin/
 *.so.*
 *.dll
 *.dylib
-
-# Compiler settings
-.clangd
-compile_flags.txt

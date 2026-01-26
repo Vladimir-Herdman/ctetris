@@ -1,5 +1,5 @@
 CXX := clang
-CXXFLAGS := -std=c23 -O2 -Isrc -Iinclude -Wall -Wextra
+CXXFLAGS := -std=c23 -O2 -Isrc -Wall -Wextra
 CXXMACRODEF :=
 #-DTERMINALCHESS_INCLUDE_CONFIGREADER -DDEV_HELPERS_LATER_REMOVE
 
@@ -7,7 +7,7 @@ CXXMACRODEF :=
 SRC := $(shell find src/ -name '*.c')
 OBJ := $(patsubst src/%.c,build/main/%.o,$(SRC))
 
-TESTCXXFLAGS := -std=c23 -O2 -Isrc -Iinclude -Wall -Wextra
+TESTCXXFLAGS := -std=c23 -O2 -Isrc -Wall -Wextra
 
 TESTSRC := $(shell find test/ -name '*.c')
 TESTOBJ := $(patsubst test/%.c,build/test/%.o,$(TESTSRC))
