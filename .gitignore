@@ -10,8 +10,9 @@ Thumbs.db:encryptable
 ehthumbs.db
 ehthumbs_vista.db
 
-# Executables
+# Executables and intermediate build artifacts
 bin/
+build/
 
 # Objects and libs
 *.slo

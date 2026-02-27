@@ -1,41 +1,39 @@
-CXX := clang
-CXXFLAGS := -std=c23 -O2 -Isrc -Wall -Wextra
-CXXMACRODEF :=
-#-DTERMINALCHESS_INCLUDE_CONFIGREADER -DDEV_HELPERS_LATER_REMOVE
+#Makefile setup modified from from: https://makefiletutorial.com/
 
+TARGET_EXEC := main
+TARGET_DIR := bin
+BUILD_DIR := build
+SRC_DIR := src
 
-SRC := $(shell find src/ -name '*.c')
-OBJ := $(patsubst src/%.c,build/main/%.o,$(SRC))
+SRC := $(shell find $(SRC_DIR) -name '*.c')
+OBJS := $(SRC:%=$(BUILD_DIR)/%.o)
+DEPS := $(OBJS:.o=.d)
 
-TESTCXXFLAGS := -std=c23 -O2 -Isrc -Wall -Wextra
+INC_DIRS := $(shell find $(SRC_DIR) -type d)
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-TESTSRC := $(shell find test/ -name '*.c')
-TESTOBJ := $(patsubst test/%.c,build/test/%.o,$(TESTSRC))
+CC := clang
+CFLAGS := $(INC_FLAGS) -MMD -MP -std=c23 -O3 -Wall -Wextra
+LDLIBS := -lncurses
+LDFLAGS :=
+CDEFS :=
 
-all: $(OBJ)
-	@mkdir -p ./bin
-	@$(CXX) $(CXXFLAGS) $(CXXMACRODEF) $(OBJ) -o ./bin/main
-
-build/main/%.o: src/%.c
+$(TARGET_DIR)/$(TARGET_EXEC): $(OBJS)
 	@mkdir -p $(dir $@)
-	@$(CXX) $(CXXFLAGS) $(CXXMACRODEF) -c $< -o $@
+	@printf '\n  Compiled binary: %s\n' $@
+	@$(CC) $(OBJS)  -o $(TARGET_DIR)/$(TARGET_EXEC) $(LDFLAGS) $(LDLIBS)
 
-test: $(TESTOBJ)
-	@mkdir -p ./bin
-	@$(CXX) $(TESTCXXFLAGS) $(TESTOBJ) -o bin/test
-	@printf '    compiled into bin/test'
-
-build/test/%.o: test/%.c
+$(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
-	@$(CXX) $(TESTCXXFLAGS) $(CXXMACRODEF) -c $< -o $@
+	@printf '  Compiling: %s\n' $@
+	@$(CC) $(CFLAGS) $(CDEFS) -c $< -o $@
 
-.PHONY: all clean run runtest
+.PHONY: clean run
 clean: 
-	@printf '    cleaning build/ and bin/ directories...'
+	@printf '  rm -r %s %s\n' $(BUILD_DIR)/ $(TARGET_DIR)/
 	@rm -r build/ bin/ 2>/dev/null || true
 
-run: all
-	@./bin/main
+run: 
+	@./$(TARGET_DIR)/$(TARGET_EXEC)
 
-runtest: test
-	@./bin/test
+-include $(DEPS)
