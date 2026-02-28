@@ -1,2 +1,2 @@
 CompileFlags:
-  Add: [-std=c23, -Isrc, -O2, -Wall, -Wextra]
+  Add: [-std=c23, -Isrc, -O3, -Wall, -Wextra, -Wpedantic, -DTEXTVIEW]

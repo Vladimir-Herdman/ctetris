@@ -13,10 +13,10 @@ INC_DIRS := $(shell find $(SRC_DIR) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CC := clang
-CFLAGS := $(INC_FLAGS) -MMD -MP -std=c23 -O3 -Wall -Wextra
+CFLAGS := $(INC_FLAGS) -MMD -MP -std=c23 -O3 -Wall -Wextra -Wpedantic
 LDLIBS := -lncurses
 LDFLAGS :=
-CDEFS :=
+CDEFS := -DTEXTVIEW
 
 $(TARGET_DIR)/$(TARGET_EXEC): $(OBJS)
 	@mkdir -p $(dir $@)
