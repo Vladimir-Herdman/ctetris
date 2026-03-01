@@ -1,8 +1,6 @@
 #ifndef CTETRIS_MODEL_H
 #define CTETRIS_MODEL_H
 
-#include <stdint.h>
-
 #ifdef CTET_REMOVE_PREFIX
 #define ctet(text) text
 #define CTET(text) text
@@ -28,24 +26,23 @@ struct ctet(Size) {
 };
 
 typedef struct ctet(State) ctet(State);
+typedef int ctet(board_t);
 struct ctet(State) {
     ctet(Action) uncommitted_actions[16];
+    int action_count;
     ctet(Size) size;
-    int* board;
+    ctet(board_t)* board;
     int  gravity;
     int  score;
 };
 
 //Commit actions currently uncommitted, update board and score
-ctet(State)* new_state(const ctet(Size));
-void free_state(ctet(State)*);
+ctet(State)* ctet(new_state)(const ctet(Size) size);
+void ctet(free_state)(ctet(State)* state);
 void ctet(update_state)(ctet(State)* state);
 
-//All int functions return the points for that action
-int ctet(clear_full_rows)(int* board, const ctet(Size) size);
-
 //Add action to action list
-void ctet(action)(ctet(Action) action);
+void ctet(action)(ctet(State)* state, ctet(Action) action);
 
 #undef ctet
 #undef CTET

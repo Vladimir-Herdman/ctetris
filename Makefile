@@ -33,7 +33,7 @@ clean:
 	@printf '  rm -r %s %s\n' $(BUILD_DIR)/ $(TARGET_DIR)/
 	@rm -r build/ bin/ 2>/dev/null || true
 
-run: 
+run: $(TARGET_DIR)/$(TARGET_EXEC)
 	@./$(TARGET_DIR)/$(TARGET_EXEC)
 
 -include $(DEPS)

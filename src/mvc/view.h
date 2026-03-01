@@ -13,11 +13,7 @@
 #define CTET(text) CTET_##text
 #endif
 
-#ifdef TEXTVIEW
-void ctet(print_board)(int* board, const Size size);
-#else //ncurses view
-
-#endif
+void ctet(print_board)(const board_t* board, const Size size);
 
 #undef ctet
 #undef CTET

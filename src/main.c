@@ -1,10 +1,33 @@
+//TODO - is main the controller here? do you just have to implement the controller and view every time?
 #include <ncurses.h> //documentation for learning: https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
 
+#define CTET_REMOVE_PREFIX
+#include "mvc/model.h"
+#include "mvc/view.h"
+#undef CTET_REMOVE_PREFIX
+
 int main() {
+#ifdef TEXTVIEW
+    State* state = new_state((Size){20, 10});
+    Size size = state->size;
+    board_t* board = state->board;
+    char board_str[(size.rows*size.cols)+size.rows];
+    int count = 0;
+    for (int i=0; i<size.rows; i++) {
+        for (int j=0; j<size.cols; j++) {
+            board_str[count] = '0'+board[count];
+            ++count;
+        }
+        board_str[count++] = '\n';
+    }
+    printf("%s", board_str);
+    //printf("state with size: {cols:%d, rows:%d}\n", state->size.cols, state->size.rows);
+    free_state(state);
+#else
     initscr();
     noecho(); //don't print user input to screen when typed
     keypad(stdscr, true); //include keypad in getch as val can get
@@ -38,5 +61,7 @@ int main() {
     endwin();
 
     printf("getyx: %d, %d, %c:%d\n", x, y, a, (unsigned int)a);
+#endif
+
     return 0;
 }
