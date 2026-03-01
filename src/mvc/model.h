@@ -4,9 +4,11 @@
 #ifdef CTET_REMOVE_PREFIX
 #define ctet(text) text
 #define CTET(text) text
+#define BOARD_AT(board, size, r, c) (board)[(size).cols*(r)+(c)]
 #else
 #define ctet(text) ctet_##text
 #define CTET(text) CTET_##text
+#define CTET_BOARD_AT(board, size, r, c) (board)[(size).cols*(r)+(c)]
 #endif
 
 typedef enum ctet(Action) ctet(Action);
