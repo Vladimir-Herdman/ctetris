@@ -3,13 +3,13 @@
 TARGET_EXEC := main
 TARGET_DIR := bin
 BUILD_DIR := build
-SRC_DIR := src
+SRC_DIRS := src example
 
-SRC := $(shell find $(SRC_DIR) -name '*.c')
+SRC := $(shell find $(SRC_DIRS) -name '*.c')
 OBJS := $(SRC:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
-INC_DIRS := $(shell find $(SRC_DIR) -type d)
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CC := clang

@@ -7,19 +7,16 @@
 #include <unistd.h>
 #include <time.h>
 
+#include "model.h"
 #include "typedefs.h"
+#include "view.h"
 
 #define get_timespec_ms(timespec) ((u64)(timespec).tv_sec * 1000ULL + (u64)(timespec).tv_nsec / 1000000ULL)
 #define milliseconds_delta(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
 
-#define CTET_REMOVE_PREFIX
-#include "mvc/model.h"
-#include "mvc/view.h"
-#undef CTET_REMOVE_PREFIX
-
 int main() {
 #ifdef TEXTVIEW
-    State* state = new_state((Size){10, 10});
+    ctet_State* state = ctet_new_state((ctet_Size){10, 10});
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
@@ -31,15 +28,18 @@ int main() {
 
         //probably move down tetrino
         if (delta_milliseconds >= 1000) {
-            print_board(state);
+            ctet_print_board(state);
             ++count;
-            BOARD_AT(state->board, state->size, 0, count % 10) = 1;
+            CTET_BOARD_AT(state->board, state->size, 0, count % 10) = 1;
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
 
+        //TODO: Does this actually rest the program, are there better rests to use, is this fine to use
+        //for the current use case? Like, is it fine to keep the program running like this if it's not
+        //actually like an energy saving sleep?
         nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=25000000}, NULL); //about 34-35 frames per second
     }
-    free_state(state);
+    ctet_free_state(state);
 #else
     initscr();
     noecho(); //don't print user input to screen when typed
