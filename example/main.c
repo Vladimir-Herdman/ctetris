@@ -7,30 +7,47 @@
 #include <unistd.h>
 #include <time.h>
 
-#include "model.h"
+#define CTET_REMOVE_PREFIX
+#include "ctetris.h"
 #include "typedefs.h"
-#include "view.h"
 
 #define get_timespec_ms(timespec) ((u64)(timespec).tv_sec * 1000ULL + (u64)(timespec).tv_nsec / 1000000ULL)
 #define milliseconds_delta(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
 
+void print_board(const State* state) {
+    const Size size = state->size;
+    board_t* board = state->board;
+    char board_str[size.rows*size.cols+size.rows];
+    int count = 0;
+    for (int i=0; i<size.rows; i++) {
+        for (int j=0; j<size.cols; j++) {
+            board_str[count] = '0' + BOARD_AT(board, size, i, j);
+            ++count;
+        }
+        board_str[count++] = '\n';
+    }
+    board_str[count-1] = '\0';
+    printf("%s\n", board_str);
+    printf("\033[%dA\r", size.rows); //Go up and left to start of board
+}
+
 int main() {
 #ifdef TEXTVIEW
-    ctet_State* state = ctet_new_state((ctet_Size){10, 10});
+    State* state = new_state((Size){10, 10});
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
     int count=0;
-    //Arbitrary, while for use in testing
+    //Arbitrary, 'while' for use in testing
     while (count != 10) {
         clock_gettime(CLOCK_MONOTONIC, &now_ts);
         u64 delta_milliseconds = milliseconds_delta(now_ts, last_ts);
 
         //probably move down tetrino
         if (delta_milliseconds >= 1000) {
-            ctet_print_board(state);
+            print_board(state);
             ++count;
-            CTET_BOARD_AT(state->board, state->size, 0, count % 10) = 1;
+            BOARD_AT(state->board, state->size, 0, count % 10) = 1;
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
 
@@ -39,7 +56,8 @@ int main() {
         //actually like an energy saving sleep?
         nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=25000000}, NULL); //about 34-35 frames per second
     }
-    ctet_free_state(state);
+
+    free_state(state);
 #else
     initscr();
     noecho(); //don't print user input to screen when typed

@@ -1,10 +1,6 @@
 #ifndef CTETRIS_MODEL_H
 #define CTETRIS_MODEL_H
 
-#include <stdbool.h>
-
-#define CTET_BOARD_AT(board, size, r, c) (board)[(size).cols*(r)+(c)]
-
 typedef enum ctet_Action {
     CTET_MOVE_UP=1,
     CTET_MOVE_DOWN,
@@ -30,18 +26,5 @@ typedef struct ctet_State {
     int  gravity;
     int  score;
 } ctet_State;
-
-ctet_State* ctet_new_state(const ctet_Size size);
-void ctet_init_state(ctet_State* state, const ctet_Size size);
-
-//Call on both stack initialized and malloced states, as board array is
-//malloced to be fiven size.
-void ctet_free_state(ctet_State* state);
-
-//Commit actions currently uncommitted, update board and score
-void ctet_update_state(ctet_State* state);
-
-//Add action to action list
-void ctet_action(ctet_State* state, ctet_Action action);
 
 #endif //CTETRIS_MODEL_H

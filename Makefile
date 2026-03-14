@@ -3,7 +3,7 @@
 TARGET_EXEC := main
 TARGET_DIR := bin
 BUILD_DIR := build
-SRC_DIRS := src example
+SRC_DIRS := src include example
 
 SRC := $(shell find $(SRC_DIRS) -name '*.c')
 OBJS := $(SRC:%=$(BUILD_DIR)/%.o)
