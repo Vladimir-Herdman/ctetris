@@ -1,11 +1,14 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "controller.h"
+#include "model.h"
 
 #define TETRONIMO_AT(tet, r, c) (tet->tetronimo)[4*(r)+(c)]
 
 void ctet_init_state(ctet_State* state, const ctet_Size size) {
     state->board = calloc(size.rows * size.cols, sizeof(ctet_board_t));
+    memset(state->uncommitted_actions, 0, MAX_UNC_ACTIONS*sizeof(state->uncommitted_actions[0]));
     state->malloced = false;
     state->size = size;
     state->gravity = 1;
@@ -25,48 +28,48 @@ void ctet_free_state(ctet_State* state) {
     if (state->malloced) free(state);
 }
 
-//TODO - what are all the base pieces I need?
+//TODO - what are all the base pieces?
 static ctet_board_t tet_lr[4][4] = {
-    {1, 0, 0, 0},
-    {1, 0, 0, 0},
-    {1, 0, 0, 0},
-    {1, 1, 0, 0}
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,1,0,0}
 };
 static ctet_board_t tet_ll[4][4] = {
-    {0, 1, 0, 0},
-    {0, 1, 0, 0},
-    {0, 1, 0, 0},
-    {1, 1, 0, 0}
+    {0,1,0,0},
+    {0,1,0,0},
+    {0,1,0,0},
+    {1,1,0,0}
 };
 static ctet_board_t tet_sqr[4][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {1, 1, 0, 0},
-    {1, 1, 0, 0}
+    {0,0,0,0},
+    {0,0,0,0},
+    {1,1,0,0},
+    {1,1,0,0}
 };
 static ctet_board_t tet_beam[4][4] = {
-    {1, 0, 0, 0},
-    {1, 0, 0, 0},
-    {1, 0, 0, 0},
-    {1, 0, 0, 0}
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,0,0,0},
+    {1,0,0,0}
 };
 static ctet_board_t tet_cross[4][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {0, 1, 0, 0},
-    {1, 1, 1, 0}
+    {0,0,0,0},
+    {0,0,0,0},
+    {0,1,0,0},
+    {1,1,1,0}
 };
 static ctet_board_t tet_dr[4][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {0, 1, 1, 0},
-    {1, 1, 0, 0}
+    {0,0,0,0},
+    {0,0,0,0},
+    {0,1,1,0},
+    {1,1,0,0}
 };
 static ctet_board_t tet_dl[4][4] = {
-    {0, 0, 0, 0},
-    {0, 0, 0, 0},
-    {1, 1, 0, 0},
-    {0, 1, 1, 0}
+    {0,0,0,0},
+    {0,0,0,0},
+    {1,1,0,0},
+    {0,1,1,0}
 };
 //Stores first row, so use like TETRONIMO_AT(tet_lr, 3, 0) for tet_lr[3][0]
 static ctet_board_t* tetronimo_baselist[7] = {
