@@ -1,2 +1,2 @@
 CompileFlags:
-  Add: [-std=c23, -Isrc, -Iinclude, -O3, -DTEXTVIEW]
+  Add: [-std=c23, -Isrc, -Iinclude, -O2, -DTEXTVIEW, -Wno-switch]

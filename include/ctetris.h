@@ -16,6 +16,7 @@
 #   define BOARD_AT          CTET_BOARD_AT
 
 #   define Action            ctet_Action
+#   define Result            ctet_Result
 #   define MOVE_UP           CTET_MOVE_UP
 #   define MOVE_DOWN         CTET_MOVE_DOWN
 #   define MOVE_LEFT         CTET_MOVE_LEFT

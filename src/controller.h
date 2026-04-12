@@ -9,11 +9,12 @@ void ctet_init_state(ctet_State* state, const ctet_Size size);
 ctet_State* ctet_new_state(const ctet_Size size);
 void ctet_free_state(ctet_State* state);
 
-//Commit actions currently uncommitted, update board and score
-void ctet_update_state(ctet_State* state);
-
-//Add action to action list
-void ctet_action(ctet_State* state, ctet_Action action);
-
+//perform action on state (also accepts char, so 'hjkl' or arrows for movement).
+//if update made, return true
+//Acceptable characters and result:
+//  hjkl                    -> vim movements same as CTET_MOVE_<direction>
+//  <up><down><left><right> -> arrow keys for CTET_MOVE_<direction>
+//TODO: Set some keys for relevant options later on
+ctet_Result ctet_update_state(ctet_State* state, ctet_Action action);
 
 #endif //CTETRIS_MVC_CONTROLLER_H

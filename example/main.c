@@ -1,12 +1,28 @@
+//thoughts in case i forget
+
+// //2)
+// - check 2 rows from edge moving to make sure it isn't hitting anything
+//
+//
+// //3)
+// - Maybe a list of the tetrinos instead of individual? Or now just make a list of the tetrinos form the static ones?
+
+
+
 //TODO - is main the controller here? do you just have to implement the controller and view every time?
-#include <ncurses.h> //documentation for learning: https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
+#include "model.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#include <unistd.h>
-#include <termios.h>
 #include <time.h>
+
+#ifdef TEXTVIEW
+#   include <termios.h>
+#   include <unistd.h>
+#else
+#   include <ncurses.h>
+#endif
 
 #define CTET_REMOVE_PREFIX
 #include "ctetris.h"
@@ -16,7 +32,6 @@
 #define diff_ms(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
 
 #ifdef TEXTVIEW
-
 void print_board(const State* state) {
     const Size size = state->size;
     board_t* board = state->board;
@@ -52,8 +67,7 @@ int main() {
     State* state = new_state((Size){10, 10});
     char key_ch = 0;
     bool ctet_running = true;
-    unsigned char bspot[2] = {0};
-    BOARD_AT(state, 0, 0) = '@';
+    //BOARD_AT(state, 0, 0) = '@';
     print_board(state);
 
     struct timespec last_ts, now_ts;
@@ -64,47 +78,10 @@ int main() {
         u64 delta_milliseconds = diff_ms(now_ts, last_ts);
 
         read(STDIN_FILENO, &key_ch, 1);
-        switch (key_ch) {
-            case 'q':
-                ctet_running = false;
-                break;
+        Result update = update_state(state, key_ch);
+        if (update == CTET_PLACED_PIECE) print_board(state);
+        if (key_ch == 'q') ctet_running = false;
 
-            case 'j':
-                if (bspot[0] < 9) {
-                    BOARD_AT(state, bspot[0], bspot[1]) = 1;
-                    ++bspot[0];
-                    BOARD_AT(state, bspot[0], bspot[1]) = 'X';
-                    print_board(state);
-                }
-                break;
-
-            case 'h':
-                if (bspot[1] > 0) {
-                    BOARD_AT(state, bspot[0], bspot[1]) = 1;
-                    --bspot[1];
-                    BOARD_AT(state, bspot[0], bspot[1]) = 'X';
-                    print_board(state);
-                }
-                break;
-
-            case 'k':
-                if (bspot[0] > 0) {
-                    BOARD_AT(state, bspot[0], bspot[1]) = 1;
-                    --bspot[0];
-                    BOARD_AT(state, bspot[0], bspot[1]) = 'X';
-                    print_board(state);
-                }
-                break;
-
-            case 'l':
-                if (bspot[1] < 9) {
-                    BOARD_AT(state, bspot[0], bspot[1]) = 1;
-                    ++bspot[1];
-                    BOARD_AT(state, bspot[0], bspot[1]) = 'X';
-                    print_board(state);
-                }
-                break;
-        }
         if (delta_milliseconds >= 1000) {
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
