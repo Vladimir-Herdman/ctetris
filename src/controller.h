@@ -17,4 +17,6 @@ void ctet_free_state(ctet_State* state);
 //TODO: Set some keys for relevant options later on
 ctet_Result ctet_update_state(ctet_State* state, ctet_Action action);
 
+void printfdebug(const char* fmt, ...);
+
 #endif //CTETRIS_MVC_CONTROLLER_H

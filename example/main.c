@@ -66,24 +66,30 @@ int main() {
 
     State* state = new_state((Size){10, 10});
     char key_ch = 0;
-    bool ctet_running = true;
-    //BOARD_AT(state, 0, 0) = '@';
+    puts(""); //line above tetris game for debug printing
     print_board(state);
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
 
-    while (ctet_running) {
+    while (state->gamerunning) {
         clock_gettime(CLOCK_MONOTONIC, &now_ts);
         u64 delta_milliseconds = diff_ms(now_ts, last_ts);
 
         read(STDIN_FILENO, &key_ch, 1);
         Result update = update_state(state, key_ch);
-        if (update == CTET_PLACED_PIECE) print_board(state);
-        if (key_ch == 'q') ctet_running = false;
+        if (update != CTET_DO_NOTHING) print_board(state);
+        if (key_ch == 'q' || update == CTET_END_GAME) goto endgame;
 
         if (delta_milliseconds >= 1000) {
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
+            update = update_state(state, MOVE_DOWN);
+            if (update == CTET_END_GAME) {
+                endgame:
+                state->gamerunning = false;
+                printf("\033[%dB", state->size.rows); //move below screen so don't erase board on game over
+            }
+            else print_board(state);
         }
 
         //TODO: Does this actually rest the program, are there better rests to use, is this fine to use

@@ -5,8 +5,7 @@
 #define TET_SIZE 16
 
 typedef enum ctet_Action : unsigned char {
-    CTET_MOVE_UP=1,
-    CTET_MOVE_DOWN,
+    CTET_MOVE_DOWN=1,
     CTET_MOVE_LEFT,
     CTET_MOVE_RIGHT,
     CTET_STORE_TETRONIMO,
@@ -15,7 +14,10 @@ typedef enum ctet_Action : unsigned char {
 
 typedef enum ctet_Result : unsigned char {
     CTET_DO_NOTHING=0,
-    CTET_PLACED_PIECE,
+    CTET_PLACED_TETRONIMO,
+    CTET_MOVED_TETRONIMO,
+    CTET_MOVE_NOTALLOWED,
+    CTET_END_GAME,
 } ctet_Result;
 
 typedef struct ctet_Size {
@@ -26,7 +28,6 @@ typedef struct ctet_Size {
 typedef unsigned char ctet_board_t;
 typedef struct ctet_State {
     ctet_Size size;
-    int action_count;
     bool malloced;
     ctet_board_t* board;
     ctet_board_t cur_tet[TET_SIZE];
@@ -34,6 +35,7 @@ typedef struct ctet_State {
     ctet_Size cur_pos;
     int  gravity;
     int  score;
+    bool gamerunning;
 } ctet_State;
 
 #endif //CTETRIS_MODEL_H
