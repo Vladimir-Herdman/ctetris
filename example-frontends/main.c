@@ -1,15 +1,4 @@
-//thoughts in case i forget
-
-// //2)
-// - check 2 rows from edge moving to make sure it isn't hitting anything
-//
-//
-// //3)
-// - Maybe a list of the tetrinos instead of individual? Or now just make a list of the tetrinos form the static ones?
-
-
-
-//TODO - is main the controller here? do you just have to implement the controller and view every time?
+#include "controller.h"
 #include "model.h"
 #include <stddef.h>
 #include <stdio.h>
@@ -34,20 +23,31 @@
 #ifdef TEXTVIEW
 void print_board(const State* state) {
     const Size size = state->size;
-    board_t* board = state->board;
-    char board_str[size.rows*size.cols+size.rows];
+    const board_t* board = state->board;
+    //char board_str[size.rows*size.cols+size.rows];
     int count = 0;
     for (int i=0; i<size.rows; i++) {
         for (int j=0; j<size.cols; j++) {
             unsigned char bval = BOARD_AT(state, i, j);
-            if (bval <= '9') board_str[count] = '0' + BOARD_AT(state, i, j);
-            else board_str[count] = BOARD_AT(state, i, j);
+            switch (bval) {
+                case 0: printf("\033[0m");                break;
+                case 1: printf("\033[48;2;255;128;0m");   break;
+                case 2: printf("\033[48;2;0;0;255m");     break;
+                case 3: printf("\033[48;2;255;255;0m");   break;
+                case 4: printf("\033[48;2;0;255;255m");   break;
+                case 5: printf("\033[48;2;153;0;204m");   break;
+                case 6: printf("\033[48;2;0;255;0m");     break;
+                case 7: printf("\033[48;2;255;0;0m");     break;
+            }
+            putchar('0' + bval);
+            //board_str[count] = bval;
             ++count;
         }
-        board_str[count++] = '\n';
+        putchar('\n');
+        //board_str[count++] = '\n';
     }
-    board_str[count-1] = '\0';
-    printf("%s\n", board_str);
+    //board_str[count-1] = '\0';
+    //printf("%s\n", board_str);
     printf("\033[%dA\r", size.rows); //Go up and left to start of board
 }
 
@@ -64,7 +64,7 @@ int main() {
     struct termios og_term, ctet_term;
     setup_keypress_reading(&og_term, &ctet_term);
 
-    State* state = new_state((Size){10, 10});
+    State* state = new_state((Size){20, 10});
     char key_ch = 0;
     puts(""); //line above tetris game for debug printing
     print_board(state);

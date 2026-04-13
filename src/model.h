@@ -8,6 +8,7 @@ typedef enum ctet_Action : unsigned char {
     CTET_MOVE_DOWN=1,
     CTET_MOVE_LEFT,
     CTET_MOVE_RIGHT,
+    CTET_INSTANT_DOWN,
     CTET_STORE_TETRONIMO,
     CTET_UNSTORE_TETRONIMO,
 } ctet_Action;

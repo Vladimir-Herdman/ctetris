@@ -33,46 +33,65 @@ static ctet_board_t tet_lr[TET_SIZE] = {
     1,1,0,0,
 };
 static ctet_board_t tet_ll[TET_SIZE] = {
-    0,1,0,0,
-    0,1,0,0,
-    0,1,0,0,
-    1,1,0,0,
+    0,2,0,0,
+    0,2,0,0,
+    0,2,0,0,
+    2,2,0,0,
 };
 static ctet_board_t tet_sqr[TET_SIZE] = {
     0,0,0,0,
     0,0,0,0,
-    1,1,0,0,
-    1,1,0,0,
+    3,3,0,0,
+    3,3,0,0,
 };
 static ctet_board_t tet_beam[TET_SIZE] = {
-    1,0,0,0,
-    1,0,0,0,
-    1,0,0,0,
-    1,0,0,0,
+    4,0,0,0,
+    4,0,0,0,
+    4,0,0,0,
+    4,0,0,0,
 };
 static ctet_board_t tet_cross[TET_SIZE] = {
     0,0,0,0,
     0,0,0,0,
-    0,1,0,0,
-    1,1,1,0,
+    0,5,0,0,
+    5,5,5,0,
 };
 static ctet_board_t tet_dr[TET_SIZE] = {
     0,0,0,0,
     0,0,0,0,
-    0,1,1,0,
-    1,1,0,0,
+    0,6,6,0,
+    6,6,0,0,
 };
 static ctet_board_t tet_dl[TET_SIZE] = {
     0,0,0,0,
     0,0,0,0,
-    1,1,0,0,
-    0,1,1,0,
+    7,7,0,0,
+    0,7,7,0,
 };
 static ctet_board_t* tetronimo_baselist[7] = {tet_lr, tet_ll, tet_sqr, tet_beam, tet_cross, tet_dr, tet_dl};
 
 //TODO - finishe this method
-static int clear_full_rows(ctet_board_t* board, const ctet_Size size) {
-    return -1;
+static void clear_full_rows(ctet_State* s) {
+    int score_gained = 0;
+    for (int i=0; i<s->size.rows; i++) {
+        if (CTET_BOARD_AT(s, i, 0) != 0) {
+            int count = 0;
+            for (int j=0; j<s->size.cols; j++) {
+                if (CTET_BOARD_AT(s, i, j) != 0) ++count;
+            }
+            //TODO - Currently, after a single row is cleaned, it moves everything above
+            //it down. Would probably be more efficient if you could figure out a way to
+            //remove all lines that are full in a block, and then memcpy or something.
+            if (count == s->size.cols) {
+                memset(&CTET_BOARD_AT(s, i, 0), 0, s->size.cols);
+                for (int iu=i; i>0; i--) { //go up and move down all rows
+                    memcpy(&CTET_BOARD_AT(s, i, 0), &CTET_BOARD_AT(s, i-1, 0), s->size.cols);
+                }
+                //memcpy(s->cur_tet, tetronimo_baselist[++tet_count%7], 16);
+            }
+        }
+    }
+    s->score += score_gained;
 }
 
 //check looks at:
@@ -88,7 +107,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
-                    if (bval == 1) return false;
+                    if (bval != 0) return false;
                     break;
                 }
             }
@@ -102,7 +121,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j-1);
-                    if (bval == 1) return false;
+                    if (bval != 0) return false;
                     break;
                 }
             }
@@ -130,7 +149,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j+1);
-                    if (bval == 1) return false;
+                    if (bval != 0) return false;
                     break;
                 }
             }
@@ -144,7 +163,7 @@ static void clear_old_tet_loc(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval == 1 && *pbval == 1) *pbval = 0;
+            if (curval != 0 && *pbval != 0) *pbval = 0;
         }
     }
 }
@@ -155,7 +174,7 @@ static void move_down(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval == 1) *pbval = curval;
+            if (curval != 0) *pbval = curval;
         }
     }
 }
@@ -165,7 +184,7 @@ static void move_left(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval == 1) *pbval = curval;
+            if (curval != 0) *pbval = curval;
         }
     }
 }
@@ -175,7 +194,7 @@ static void move_right(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval == 1) *pbval = curval;
+            if (curval != 0) *pbval = curval;
         }
     }
 }
@@ -197,7 +216,7 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t pbval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval == 1 && pbval == 1) {
+            if (curval != 0 && pbval != 0) {
                 s->gamerunning = false;
                 return CTET_END_GAME;
             }
@@ -208,29 +227,45 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
 }
 
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
+    ctet_Result result = CTET_DO_NOTHING;
     switch (action) {
         case 'j':
         case CTET_MOVE_DOWN:
             if (!move_allowed(s, CTET_MOVE_DOWN)){ //if you tried to go down and hit a wall, it's been placed there. Game end if can't place a new piece at top.
-                return tetronimo_placed_reset(s);
+                result = tetronimo_placed_reset(s);
+                break;
             }
             clear_old_tet_loc(s);
             move_down(s);
-            return CTET_MOVED_TETRONIMO;
+            result = CTET_MOVED_TETRONIMO;
+            break;
 
         case 'h':
         case CTET_MOVE_LEFT:
-            if (!move_allowed(s, CTET_MOVE_LEFT)) return CTET_MOVE_NOTALLOWED;
+            if (!move_allowed(s, CTET_MOVE_LEFT)) {
+                result = CTET_MOVE_NOTALLOWED;
+                break;
+            }
             clear_old_tet_loc(s);
             move_left(s);
-            return CTET_MOVED_TETRONIMO;
+            result = CTET_MOVED_TETRONIMO;
+            break;
 
         case 'l':
         case CTET_MOVE_RIGHT:
-            if (!move_allowed(s, CTET_MOVE_RIGHT)) return CTET_MOVE_NOTALLOWED;
+            if (!move_allowed(s, CTET_MOVE_RIGHT)) {
+                result = CTET_MOVE_NOTALLOWED;
+                break;
+            }
             clear_old_tet_loc(s);
             move_right(s);
-            return CTET_MOVED_TETRONIMO;
+            result = CTET_MOVED_TETRONIMO;
+            break;
+
+        case ' ':
+        case CTET_INSTANT_DOWN:
+            while ((result = ctet_update_state(s, CTET_MOVE_DOWN)) == CTET_MOVED_TETRONIMO);;
+            break;
 
         case CTET_STORE_TETRONIMO:
             store_tet(s);
@@ -243,7 +278,8 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case 0:
             break;
     }
-    return CTET_DO_NOTHING;
+    if (result != CTET_DO_NOTHING) clear_full_rows(s);
+    return result;
 }
 
 //TODO
