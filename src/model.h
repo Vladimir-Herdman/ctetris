@@ -8,6 +8,8 @@ typedef enum ctet_Action : unsigned char {
     CTET_MOVE_DOWN=1,
     CTET_MOVE_LEFT,
     CTET_MOVE_RIGHT,
+    CTET_ROTATE_LEFT,
+    CTET_ROTATE_RIGHT,
     CTET_INSTANT_DOWN,
     CTET_STORE_TETRONIMO,
     CTET_UNSTORE_TETRONIMO,
@@ -32,7 +34,8 @@ typedef struct ctet_State {
     bool malloced;
     ctet_board_t* board;
     ctet_board_t cur_tet[TET_SIZE];
-    ctet_board_t* next_tets[NEXT_TET_LIST_SIZE];
+    ctet_board_t next_tets[NEXT_TET_LIST_SIZE][TET_SIZE];
+    int next_tet_index;
     ctet_Size cur_pos;
     int  gravity;
     int  score;

@@ -1,5 +1,5 @@
-#include "controller.h"
 #include "model.h"
+#include <time.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -80,7 +80,10 @@ int main() {
         Result update = update_state(state, key_ch);
         if (update != CTET_DO_NOTHING) print_board(state);
         if (key_ch == 'q' || update == CTET_END_GAME) goto endgame;
+        if (key_ch == ' ' || key_ch == 'j' || update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
 
+        //for stack overflow timing reference?
+        //https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
         if (delta_milliseconds >= 1000) {
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
             update = update_state(state, MOVE_DOWN);

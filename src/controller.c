@@ -2,13 +2,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "controller.h"
 #include "model.h"
 
 #define TET_AT(tet, r, c) (tet)[4*(r)+(c)]
+#define PRINT_TET(tet)                           \
+    for (int ti=0; ti<4; ti++) {                 \
+        for (int tj=0; tj<4; tj++) {             \
+            printf("%d", TET_AT((tet), ti, tj)); \
+        }                                        \
+        puts("");                                \
+    }
 
-//REMOVE - only used for testing
+//only used for testing
 void printfdebug(const char* fmt, ...) {
     printf("\0337"); //save cursor pos
 
@@ -24,6 +32,19 @@ void printfdebug(const char* fmt, ...) {
     printf("%s", msg);
     printf("\0338"); //return to og position
     fflush(stdout);
+}
+
+//only used for testing
+static void printtet(ctet_board_t* tet) {
+    printf("\0337");
+    printf("\033[20C");
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            printf("%d", TET_AT(tet, i, j));
+        }
+        printf("\033[4D\033[1B"); //go left 4, and down 1
+    }
+    printf("\0338");
 }
 
 static ctet_board_t tet_lr[TET_SIZE] = {
@@ -82,6 +103,8 @@ static void clear_full_rows(ctet_State* s) {
             //TODO - Currently, after a single row is cleaned, it moves everything above
             //it down. Would probably be more efficient if you could figure out a way to
             //remove all lines that are full in a block, and then memcpy or something.
+            //So, a block memcpy based off the number of lines in a row, so not 1 at a
+            //time 4 times in a row for a big clear.
             if (count == s->size.cols) {
                 memset(&CTET_BOARD_AT(s, i, 0), 0, s->size.cols);
                 for (int iu=i; i>0; i--) { //go up and move down all rows
@@ -198,6 +221,101 @@ static void move_right(ctet_State* s) {
         }
     }
 }
+
+static void transpose_tet(ctet_board_t* tet) {
+    for (int i=1; i<4; i++) {
+        for (int j=0; j<i; j++) {
+            const ctet_board_t temp = TET_AT(tet, i, j);
+            TET_AT(tet, i, j) = TET_AT(tet, j, i);
+            TET_AT(tet, j, i) = temp;
+        }
+    }
+}
+
+//Not the most beautiful code I've ever written, this rotate and shift stuff,
+//but it certainly gets the job done. And, this stuff moves at lightspeed, get
+//off me.
+static ctet_Result rotate_cur_tet(ctet_State* s, const ctet_Action action) {
+    ctet_board_t cur_tet[TET_SIZE];
+    memcpy(&cur_tet, s->cur_tet, TET_SIZE);
+    transpose_tet(cur_tet);
+    //reverse each row (if going left)
+    for (int i=0; i<4 && action==CTET_ROTATE_LEFT; i++) {
+        for (int j=0; j<2; j++) {
+            const ctet_board_t temp = TET_AT(cur_tet, i, j); //                                 '  j  3-j  '
+            TET_AT(cur_tet, i, j) = TET_AT(cur_tet, i, 3-j); //3-j to get other side of row, so '0 1  0   0'
+            TET_AT(cur_tet, i, 3-j) = temp;
+        }
+    }
+    //reverse each column (if going right)
+    for (int j=0; j<4 && action==CTET_ROTATE_RIGHT; j++) {
+        for (int i=0; i<2; i++) {
+            const ctet_board_t temp = TET_AT(cur_tet, i, j);
+            TET_AT(cur_tet, i, j) = TET_AT(cur_tet, 3-i, j); //same reasoning as 3-j above, to reverse column now
+            TET_AT(cur_tet, 3-i, j) = temp;
+        }
+    }
+    //get shift left and down values
+    //  left is from 0 to 3, so 0 means no shift needed
+    //  down is from 3 to 0, so 3 means no shift needed (because going up tet, so '3' means already at bottom)
+    int shift_left = -1, shift_down = -1;
+    for (int j=0; j<4 && shift_left<0; j++) {
+        for (int i=0; i<4; i++) {
+            if (TET_AT(cur_tet, i, j) != 0) shift_left = j;
+        }
+    }
+    for (int i=3; i>=0 && shift_down<0; i--) {
+        for (int j=0; j<4; j++) {
+            if (TET_AT(cur_tet, i, j) != 0) shift_down = i;
+        }
+    }
+    //shift left and down
+    for (int i=0; i<4 && shift_left>0; i++) {
+        for (int j=shift_left; j<4; j++) {
+            TET_AT(cur_tet, i, j-shift_left) = TET_AT(cur_tet, i, j);
+        }
+    }
+    for (int i=shift_down; i>=0 && shift_down<3; i--) {
+        for (int j=0; j<4; j++) {
+            TET_AT(cur_tet, i+(3-shift_down), j) = TET_AT(cur_tet, i, j);
+        }
+    }
+    //set shifts from end to 0s in array (so no copy values left)
+    //for (int i=0; i<4 && shift_left>0; i++) memset(&TET_AT(cur_tet, i, (4-shift_left)), 0, (4-shift_left));
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            if (j == (4-shift_left)) {
+                TET_AT(cur_tet, i, j) = 0;
+            }
+        }
+    }
+    for (int i=0; i<(3-shift_down); i++) memset(&TET_AT(cur_tet, i, 0), 0, 4);
+
+    //check for conflicts in board. If conflicts, just return, otherwise, clear old loc and make rotation
+    printtet(cur_tet);
+    clear_old_tet_loc(s);
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            const ctet_board_t curval = TET_AT(cur_tet, i, j);
+            if (curval == 0) continue;
+
+            const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
+            if (bval != 0) return CTET_DO_NOTHING;
+        }
+    }
+    memcpy(s->cur_tet, cur_tet, TET_SIZE);
+
+    //reapply cur_tet to board values
+    for (int i=0; i<4;i++) {
+        for (int j=0; j<4; j++) {
+            const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
+            if (curval != 0) *pbval = curval;
+        }
+    }
+    return CTET_MOVED_TETRONIMO;
+}
+
 static void store_tet(ctet_State* s) {
     return;
 }
@@ -205,12 +323,12 @@ static void unstore_tet(ctet_State* s) {
     return;
 }
 
-int tet_count = 0; //TODO: make actual code here for choosing the tet from the next list
 //This'll reset everything that needs to be reset for a new piece at the top.
 //It'll also be the check for if the game's over, as if there's already a piece
 //where we're trying to reset to, you've had too many pieces at the top, and game over.
+static void next_tet(ctet_State* s); //forward declare so next tet in state can be assigned.
 static ctet_Result tetronimo_placed_reset(ctet_State* s) {
-    memcpy(s->cur_tet, tetronimo_baselist[++tet_count%7], 16);
+    next_tet(s);
     s->cur_pos = (ctet_Size){.rows=-1, .cols=s->size.cols/2};
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
@@ -262,6 +380,16 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             result = CTET_MOVED_TETRONIMO;
             break;
 
+        case 'f':
+        case CTET_ROTATE_LEFT:
+            result = rotate_cur_tet(s, CTET_ROTATE_LEFT);
+            break;
+
+        case 'g':
+        case CTET_ROTATE_RIGHT:
+            result = rotate_cur_tet(s, CTET_ROTATE_RIGHT);
+            break;
+
         case ' ':
         case CTET_INSTANT_DOWN:
             while ((result = ctet_update_state(s, CTET_MOVE_DOWN)) == CTET_MOVED_TETRONIMO);;
@@ -278,30 +406,47 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case 0:
             break;
     }
-    if (result != CTET_DO_NOTHING) clear_full_rows(s);
+    if (result == CTET_PLACED_TETRONIMO) clear_full_rows(s);
     return result;
 }
 
-//TODO
-static void init_cur_tet(ctet_board_t* tet) {
-    memcpy(tet, tetronimo_baselist[0], TET_SIZE);
+static void init_nexttets_list(ctet_State* s) {
+    int random = rand() % 7;
+    int last = -1;
+    static int rcount = 0;
+    for (int i=0; i<NEXT_TET_LIST_SIZE; i++) {
+        if (random == last) random = rand() % 7; //only rerun once if duplicate to last piece
+        memcpy(s->next_tets[i], tetronimo_baselist[random], TET_SIZE);
+        last = random;
+        random = rand() % 7;
+    }
 }
 
-//TODO
-static void init_nexttets_list(ctet_board_t* next_tets[NEXT_TET_LIST_SIZE]) {
-    memset(next_tets, 0, sizeof(next_tets[0])*NEXT_TET_LIST_SIZE);
+static void next_tet(ctet_State* s) {
+    //use it like a queue with the next if statement.
+    memcpy(s->cur_tet, s->next_tets[++(s->next_tet_index)], TET_SIZE);
+    if (s->next_tet_index == 2) {
+        s->next_tet_index = -1;
+        init_nexttets_list(s);
+    }
 }
 
 void ctet_init_state(ctet_State* s, const ctet_Size size) {
+    static bool srand_called = false;
+    if (srand_called == false) {
+        srand_called = true;
+        srand(time(NULL));
+    }
     s->board = calloc(size.rows * size.cols, sizeof(ctet_board_t));
-    init_cur_tet(s->cur_tet);
-    init_nexttets_list(s->next_tets);
+    s->size = size; //TODO: add 4 to size.rows (don't print this top bit) to account for going off screen when getting higher.
     s->cur_pos = (ctet_Size){.rows=-1, .cols=size.cols/2};
     s->malloced = false;
     s->gamerunning = true;
-    s->size = size;
     s->gravity = 1;
     s->score = 0;
+    s->next_tet_index = -1;
+    init_nexttets_list(s);
+    next_tet(s);
     move_down(s); //set's first tet on board at top
 }
 
@@ -318,3 +463,4 @@ void ctet_free_state(ctet_State* s) {
 }
 
 #undef TET_AT
+#undef PRINT_TET
