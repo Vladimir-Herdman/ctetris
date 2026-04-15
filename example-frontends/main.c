@@ -24,7 +24,6 @@
 void print_board(const State* state) {
     const Size size = state->size;
     const board_t* board = state->board;
-    //char board_str[size.rows*size.cols+size.rows];
     int count = 0;
     for (int i=0; i<size.rows; i++) {
         for (int j=0; j<size.cols; j++) {
@@ -40,14 +39,10 @@ void print_board(const State* state) {
                 case 7: printf("\033[48;2;255;0;0m");     break;
             }
             putchar('0' + bval);
-            //board_str[count] = bval;
             ++count;
         }
         putchar('\n');
-        //board_str[count++] = '\n';
     }
-    //board_str[count-1] = '\0';
-    //printf("%s\n", board_str);
     printf("\033[%dA\r", size.rows); //Go up and left to start of board
 }
 
@@ -77,7 +72,8 @@ int main() {
         u64 delta_milliseconds = diff_ms(now_ts, last_ts);
 
         read(STDIN_FILENO, &key_ch, 1);
-        Result update = update_state(state, key_ch);
+        Result update = CTET_DO_NOTHING;
+        if (key_ch != 0) update = update_state(state, key_ch);
         if (update != CTET_DO_NOTHING) print_board(state);
         if (key_ch == 'q' || update == CTET_END_GAME) goto endgame;
         if (key_ch == ' ' || key_ch == 'j' || update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
@@ -85,7 +81,6 @@ int main() {
         //for stack overflow timing reference?
         //https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
         if (delta_milliseconds >= 1000) {
-            clock_gettime(CLOCK_MONOTONIC, &last_ts);
             update = update_state(state, MOVE_DOWN);
             if (update == CTET_END_GAME) {
                 endgame:
@@ -93,6 +88,8 @@ int main() {
                 printf("\033[%dB", state->size.rows); //move below screen so don't erase board on game over
             }
             else print_board(state);
+
+            clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
 
         //TODO: Does this actually rest the program, are there better rests to use, is this fine to use

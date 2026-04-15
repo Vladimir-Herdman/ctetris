@@ -16,6 +16,10 @@
         puts("");                                \
     }
 
+typedef struct {
+    ctet_board_t tet[16];
+} TetBoard;
+
 //only used for testing
 void printfdebug(const char* fmt, ...) {
     printf("\0337"); //save cursor pos
@@ -91,7 +95,19 @@ static ctet_board_t tet_dl[TET_SIZE] = {
 };
 static ctet_board_t* tetronimo_baselist[7] = {tet_lr, tet_ll, tet_sqr, tet_beam, tet_cross, tet_dr, tet_dl};
 
-//TODO - finishe this method
+
+static void draw_cur_tet_on_board(ctet_State* s) {
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            if (curval == 0) continue;
+
+            CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j) = curval;
+        }
+    }
+}
+
+//TODO - finish this method
 static void clear_full_rows(ctet_State* s) {
     int score_gained = 0;
     for (int i=0; i<s->size.rows; i++) {
@@ -115,6 +131,23 @@ static void clear_full_rows(ctet_State* s) {
         }
     }
     s->score += score_gained;
+}
+
+//compare passed tet to board from s->curpos, and determine if it would
+//conflict at all (ignore cur_tet nonzero values for check).
+//  true -> no conflict.
+static bool valid_on_board(const ctet_State* s, const ctet_board_t* tet) {
+    for (int j=0; j<4; j++) { //get bottom '1' in each col, and check if any conflict in board below it.
+        for (int i=3; i>=0; i--) {
+            const ctet_board_t tet_val = TET_AT(tet, i, j);
+            if (tet_val == 0) continue;
+
+            const ctet_board_t cur_tet_val = TET_AT(s->cur_tet, i, j);
+            const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
+            if (bval != 0 && cur_tet_val == 0) return false;
+        }
+    }
+    return true;
 }
 
 //check looks at:
@@ -186,7 +219,7 @@ static void clear_old_tet_loc(ctet_State* s) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval != 0 && *pbval != 0) *pbval = 0;
+            if (curval != 0) *pbval = 0;
         }
     }
 }
@@ -222,6 +255,7 @@ static void move_right(ctet_State* s) {
     }
 }
 
+//inplace
 static void transpose_tet(ctet_board_t* tet) {
     for (int i=1; i<4; i++) {
         for (int j=0; j<i; j++) {
@@ -235,85 +269,41 @@ static void transpose_tet(ctet_board_t* tet) {
 //Not the most beautiful code I've ever written, this rotate and shift stuff,
 //but it certainly gets the job done. And, this stuff moves at lightspeed, get
 //off me.
-static ctet_Result rotate_cur_tet(ctet_State* s, const ctet_Action action) {
-    ctet_board_t cur_tet[TET_SIZE];
-    memcpy(&cur_tet, s->cur_tet, TET_SIZE);
-    transpose_tet(cur_tet);
-    //reverse each row (if going left)
-    for (int i=0; i<4 && action==CTET_ROTATE_LEFT; i++) {
+static void rotate_tet_left(ctet_board_t* tet) {
+    //reverse each row (for going left rotation)
+    transpose_tet(tet);
+    for (int i=0; i<4; i++) {
         for (int j=0; j<2; j++) {
-            const ctet_board_t temp = TET_AT(cur_tet, i, j); //                                 '  j  3-j  '
-            TET_AT(cur_tet, i, j) = TET_AT(cur_tet, i, 3-j); //3-j to get other side of row, so '0 1  0   0'
-            TET_AT(cur_tet, i, 3-j) = temp;
+            const ctet_board_t temp = TET_AT(tet, i, j); //                             '  j  3-j  '
+            TET_AT(tet, i, j) = TET_AT(tet, i, 3-j); //3-j to get other side of row, so '0 1  0   0'
+            TET_AT(tet, i, 3-j) = temp;
         }
     }
-    //reverse each column (if going right)
-    for (int j=0; j<4 && action==CTET_ROTATE_RIGHT; j++) {
-        for (int i=0; i<2; i++) {
-            const ctet_board_t temp = TET_AT(cur_tet, i, j);
-            TET_AT(cur_tet, i, j) = TET_AT(cur_tet, 3-i, j); //same reasoning as 3-j above, to reverse column now
-            TET_AT(cur_tet, 3-i, j) = temp;
-        }
-    }
+
     //get shift left and down values
     //  left is from 0 to 3, so 0 means no shift needed
     //  down is from 3 to 0, so 3 means no shift needed (because going up tet, so '3' means already at bottom)
     int shift_left = -1, shift_down = -1;
-    for (int j=0; j<4 && shift_left<0; j++) {
-        for (int i=0; i<4; i++) {
-            if (TET_AT(cur_tet, i, j) != 0) shift_left = j;
-        }
-    }
-    for (int i=3; i>=0 && shift_down<0; i--) {
-        for (int j=0; j<4; j++) {
-            if (TET_AT(cur_tet, i, j) != 0) shift_down = i;
-        }
-    }
+    for (int j=0; j<4 && shift_left<0; j++)
+        for (int i=0; i<4; i++) 
+            if (TET_AT(tet, i, j) != 0) shift_left = j;
+    for (int i=3; i>=0 && shift_down<0; i--) 
+        for (int j=0; j<4; j++) 
+            if (TET_AT(tet, i, j) != 0) shift_down = i;
+
     //shift left and down
-    for (int i=0; i<4 && shift_left>0; i++) {
-        for (int j=shift_left; j<4; j++) {
-            TET_AT(cur_tet, i, j-shift_left) = TET_AT(cur_tet, i, j);
-        }
-    }
-    for (int i=shift_down; i>=0 && shift_down<3; i--) {
-        for (int j=0; j<4; j++) {
-            TET_AT(cur_tet, i+(3-shift_down), j) = TET_AT(cur_tet, i, j);
-        }
-    }
-    //set shifts from end to 0s in array (so no copy values left)
-    //for (int i=0; i<4 && shift_left>0; i++) memset(&TET_AT(cur_tet, i, (4-shift_left)), 0, (4-shift_left));
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<4; j++) {
-            if (j == (4-shift_left)) {
-                TET_AT(cur_tet, i, j) = 0;
-            }
-        }
-    }
-    for (int i=0; i<(3-shift_down); i++) memset(&TET_AT(cur_tet, i, 0), 0, 4);
+    for (int i=0; i<4 && shift_left>0; i++)
+        for (int j=shift_left; j<4; j++)
+            TET_AT(tet, i, j-shift_left) = TET_AT(tet, i, j);
+    for (int i=shift_down; i>=0 && shift_down<3; i--)
+        for (int j=0; j<4; j++) 
+            TET_AT(tet, i+(3-shift_down), j) = TET_AT(tet, i, j);
 
-    //check for conflicts in board. If conflicts, just return, otherwise, clear old loc and make rotation
-    printtet(cur_tet);
-    clear_old_tet_loc(s);
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<4; j++) {
-            const ctet_board_t curval = TET_AT(cur_tet, i, j);
-            if (curval == 0) continue;
-
-            const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
-            if (bval != 0) return CTET_DO_NOTHING;
-        }
-    }
-    memcpy(s->cur_tet, cur_tet, TET_SIZE);
-
-    //reapply cur_tet to board values
-    for (int i=0; i<4;i++) {
-        for (int j=0; j<4; j++) {
-            const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
-            ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval != 0) *pbval = curval;
-        }
-    }
-    return CTET_MOVED_TETRONIMO;
+    //set shifts from end to 0s in array (so no old values left). I've found
+    //this section alone works for the left rotation, but not for the right.
+    //It's a large reason why I'm sticking with just left rotations, I was
+    //having trouble with fixing the right.
+    for (int i=0; i<(3-shift_down); i++) memset(&TET_AT(tet, i, 0), 0, 4);
 }
 
 static void store_tet(ctet_State* s) {
@@ -346,6 +336,8 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
 
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
     ctet_Result result = CTET_DO_NOTHING;
+    TetBoard tb;
+    static int rcount = 0;
     switch (action) {
         case 'j':
         case CTET_MOVE_DOWN:
@@ -380,14 +372,29 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             result = CTET_MOVED_TETRONIMO;
             break;
 
-        case 'f':
         case CTET_ROTATE_LEFT:
-            result = rotate_cur_tet(s, CTET_ROTATE_LEFT);
+        case 'f':
+            memcpy(tb.tet, s->cur_tet, TET_SIZE);
+            rotate_tet_left(tb.tet);
+            if (valid_on_board(s, tb.tet)) {
+                clear_old_tet_loc(s);
+                memcpy(s->cur_tet, tb.tet, TET_SIZE);
+                draw_cur_tet_on_board(s);
+                result = CTET_MOVED_TETRONIMO;
+            }
             break;
 
         case 'g':
         case CTET_ROTATE_RIGHT:
-            result = rotate_cur_tet(s, CTET_ROTATE_RIGHT);
+            //I'm annoyed with some right rotation issues, so you get 3 left turns.
+            memcpy(tb.tet, s->cur_tet, TET_SIZE);
+            for (int i=0; i<3; i++) rotate_tet_left(tb.tet);
+            if (valid_on_board(s, tb.tet)) {
+                clear_old_tet_loc(s);
+                memcpy(s->cur_tet, tb.tet, TET_SIZE);
+                draw_cur_tet_on_board(s);
+                result = CTET_MOVED_TETRONIMO;
+            }
             break;
 
         case ' ':
