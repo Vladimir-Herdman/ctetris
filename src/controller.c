@@ -323,8 +323,8 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = TET_AT(s->cur_tet, i, j);
-            ctet_board_t pbval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (curval != 0 && pbval != 0) {
+            ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
+            if (curval != 0 && bval != 0) {
                 s->gamerunning = false;
                 return CTET_END_GAME;
             }
@@ -413,7 +413,11 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case 0:
             break;
     }
-    if (result == CTET_PLACED_TETRONIMO) clear_full_rows(s);
+    if (result == CTET_PLACED_TETRONIMO) {
+        clear_old_tet_loc(s);
+        clear_full_rows(s);
+        draw_cur_tet_on_board(s);
+    }
     return result;
 }
 

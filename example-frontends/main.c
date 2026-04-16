@@ -38,7 +38,8 @@ void print_board(const State* state) {
                 case 6: printf("\033[48;2;0;255;0m");     break;
                 case 7: printf("\033[48;2;255;0;0m");     break;
             }
-            putchar('0' + bval);
+            //putchar('0' + bval);
+            printf("▓");
             ++count;
         }
         putchar('\n');
