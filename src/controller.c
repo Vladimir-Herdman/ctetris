@@ -109,26 +109,21 @@ static void draw_cur_tet_on_board(ctet_State* s) {
 
 //TODO - finish this method
 static void clear_full_rows(ctet_State* s) {
-    int score_gained = 0;
+    int score_gained=0, count;
     for (int i=0; i<s->size.rows; i++) {
-        if (CTET_BOARD_AT(s, i, 0) != 0) {
-            int count = 0;
-            for (int j=0; j<s->size.cols; j++) {
-                if (CTET_BOARD_AT(s, i, j) != 0) ++count;
-            }
-            //TODO - Currently, after a single row is cleaned, it moves everything above
-            //it down. Would probably be more efficient if you could figure out a way to
-            //remove all lines that are full in a block, and then memcpy or something.
-            //So, a block memcpy based off the number of lines in a row, so not 1 at a
-            //time 4 times in a row for a big clear.
-            if (count == s->size.cols) {
-                memset(&CTET_BOARD_AT(s, i, 0), 0, s->size.cols);
-                for (int iu=i; i>0; i--) { //go up and move down all rows
-                    memcpy(&CTET_BOARD_AT(s, i, 0), &CTET_BOARD_AT(s, i-1, 0), s->size.cols);
-                }
-                //memcpy(s->cur_tet, tetronimo_baselist[++tet_count%7], 16);
-            }
-        }
+        if (CTET_BOARD_AT(s, i, 0) == 0) continue;
+        count = 0;
+        for (int j=0; j<s->size.cols; j++)
+            if (CTET_BOARD_AT(s, i, j) != 0) ++count;
+
+        //TODO - Currently, after a single row is cleaned, it moves everything above
+        //it down. Would probably be more efficient if you could figure out a way to
+        //remove all lines that are full in a block, and then memcpy or something.
+        //So, a block memcpy based off the number of lines in a row, so not 1 at a
+        //time 4 times in a row for a big clear.
+        if (count != s->size.cols) continue;
+        while (--i > 0)
+            memcpy(&CTET_BOARD_AT(s, i+1, 0), &CTET_BOARD_AT(s, i, 0), s->size.cols);
     }
     s->score += score_gained;
 }
@@ -188,7 +183,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
         //Because of this, to do 'checkright' here, we'll have to get the righternmost
         //column of cur_tet that has a 1 in it, so then we can see if it'll go out of bounds.
         case CTET_MOVE_RIGHT:
-            int srightcol;
+            int srightcol = s->size.cols; //should always have a tet inside cur_tet, but just in case, assign over so next check fails.
             for (int j=3; j>=0; j--) {
                 for (int i=0; i<4; i++) {
                     if (TET_AT(s->cur_tet, i, j) == 0) continue;
@@ -337,7 +332,6 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
     ctet_Result result = CTET_DO_NOTHING;
     TetBoard tb;
-    static int rcount = 0;
     switch (action) {
         case 'j':
         case CTET_MOVE_DOWN:
@@ -424,7 +418,6 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
 static void init_nexttets_list(ctet_State* s) {
     int random = rand() % 7;
     int last = -1;
-    static int rcount = 0;
     for (int i=0; i<NEXT_TET_LIST_SIZE; i++) {
         if (random == last) random = rand() % 7; //only rerun once if duplicate to last piece
         memcpy(s->next_tets[i], tetronimo_baselist[random], TET_SIZE);

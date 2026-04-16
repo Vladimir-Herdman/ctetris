@@ -1,4 +1,3 @@
-#include "model.h"
 #include <time.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -23,13 +22,25 @@
 #ifdef TEXTVIEW
 void print_board(const State* state) {
     const Size size = state->size;
-    const board_t* board = state->board;
-    int count = 0;
+    fputs("\033[38;2;200;200;200m", stdout);
+
+    static bool outline = true;
+    for (int i=0; i<size.rows+1 && outline; i++) {
+        for (int j=0; j<size.cols+2; j++) {
+            fputs("▓▓", stdout);
+        }
+        putchar('\n');
+    }
+    if (outline) {
+        outline = false;
+        printf("\033[%dA\033[2C", size.rows+1);
+    }
+
     for (int i=0; i<size.rows; i++) {
         for (int j=0; j<size.cols; j++) {
             unsigned char bval = BOARD_AT(state, i, j);
             switch (bval) {
-                case 0: printf("\033[0m");                break;
+                case 0: printf("\033[38;2;0;0;0m");       break;
                 case 1: printf("\033[48;2;255;128;0m");   break;
                 case 2: printf("\033[48;2;0;0;255m");     break;
                 case 3: printf("\033[48;2;255;255;0m");   break;
@@ -38,13 +49,11 @@ void print_board(const State* state) {
                 case 6: printf("\033[48;2;0;255;0m");     break;
                 case 7: printf("\033[48;2;255;0;0m");     break;
             }
-            //putchar('0' + bval);
-            printf("▓");
-            ++count;
+            fputs("▓▓\033[0m", stdout);
         }
-        putchar('\n');
+        fputs("\n\033[2C", stdout);
     }
-    printf("\033[%dA\r", size.rows); //Go up and left to start of board
+    printf("\033[%dA", size.rows); //Go up to start of print board
 }
 
 void setup_keypress_reading(struct termios* og_term, struct termios* ctet_term) {
@@ -93,13 +102,11 @@ int main() {
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
 
-        //TODO: Does this actually rest the program, are there better rests to use, is this fine to use
-        //for the current use case? Like, is it fine to keep the program running like this if it's not
-        //actually like an energy saving sleep?
         key_ch = 0;
         nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=25000000}, NULL); //about 34-35 frames per second
     }
 
+    putchar('\n'); //so last line of printed board isn't removed with program end
     tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_term);
     free_state(state);
 
