@@ -1,10 +1,8 @@
 //CURRENT BUGS
-//  - I don't know why, but I gotta print twice to actually see the changes made
-//    to the next tet and score parts of the screen?
 //  - For some reason, clear_full_rows is getting called twice instead of once
 //    when a CTET_PLACED_TETRONIMO event occurs?
+#include <signal.h>
 #include <stdlib.h>
-#include <time.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -24,7 +22,6 @@
 
 #define get_timespec_ms(timespec) ((u64)(timespec).tv_sec * 1000ULL + (u64)(timespec).tv_nsec / 1000000ULL)
 #define diff_ms(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
-#define PRINT_STATE(s) for(int _=0; _<2; _++) print_board(s)
 
 #ifdef TEXTVIEW
 void print_board(const State* s) {
@@ -104,6 +101,8 @@ void print_board(const State* s) {
         fputs("\033[4A\033[10C", stdout);
     }
 
+    //move cursor lower 
+    fflush(stdout);
     fputs("\0338", stdout); //return to saved cursor pos
 }
 
@@ -116,14 +115,32 @@ void setup_keypress_reading(struct termios* og_term, struct termios* ctet_term) 
     tcsetattr(STDIN_FILENO, TCSAFLUSH, ctet_term);
 }
 
+struct termios og_term, ctet_term;
+State* state;
+void cleanup(const int sig) {
+    printf("\033[%dB", state->size.rows); //move below screen so don't erase board on game over
+    puts("\033[?25h"); //make cursor visible
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_term); //terminal back to original settings
+    if (state) free(state);
+    exit(sig);
+}
+
+//TODO - Print final results as a "GOOD JOB" msg, and cleanup (leave)
+void game_ended() {
+    cleanup(0);
+}
+
+
 int main() {
-    struct termios og_term, ctet_term;
+    signal(SIGINT, cleanup); //so if ctrl-c, still clean up and end program properly
+
+    fputs("\033[?25l", stdout); //this makes the cursor invisible. Not supported on all systems, but most terminals provide it.
     setup_keypress_reading(&og_term, &ctet_term);
 
-    State* state = new_state((Size){20, 10});
+    state = new_state((Size){20, 10});
     char key_ch = 0;
     puts(""); //line above tetris game for debug printing
-    PRINT_STATE(state);
+    print_board(state);
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
@@ -134,21 +151,24 @@ int main() {
 
         read(STDIN_FILENO, &key_ch, 1);
         Result update = CTET_DO_NOTHING;
-        if (key_ch != 0) update = update_state(state, key_ch);
-        if (update != CTET_DO_NOTHING) PRINT_STATE(state);
-        if (key_ch == 'q' || update == CTET_END_GAME) goto endgame;
-        if (key_ch == ' ' || key_ch == 'j' || update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
+        if (key_ch != 0) {
+            update = update_state(state, key_ch);
+            if (update == CTET_GAME_ENDED) game_ended();
+            if (update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
+            if (key_ch == 'q') game_ended();
+            print_board(state);
+        }
 
         //for stack overflow timing reference?
         //https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
         if (delta_milliseconds >= 1000) {
             update = update_state(state, MOVE_DOWN);
-            if (update == CTET_END_GAME) {
-                endgame:
-                state->gamerunning = false;
-                printf("\033[%dB", state->size.rows); //move below screen so don't erase board on game over
+            if (update == CTET_GAME_ENDED) {
+                game_ended();
             }
-            else PRINT_STATE(state);
+            else {
+                print_board(state);
+            }
 
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
@@ -157,10 +177,7 @@ int main() {
         nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=25000000}, NULL); //about 34-35 frames per second
     }
 
-    putchar('\n'); //so last line of printed board isn't removed with program end
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &og_term);
-    free_state(state);
-
+    game_ended();
     return 0;
 }
 

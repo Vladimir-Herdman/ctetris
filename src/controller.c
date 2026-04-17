@@ -7,14 +7,6 @@
 #include "controller.h"
 #include "model.h"
 
-#define PRINT_TET(tet)                           \
-    for (int ti=0; ti<4; ti++) {                 \
-        for (int tj=0; tj<4; tj++) {             \
-            printf("%d", CTET_TET_AT((tet), ti, tj)); \
-        }                                        \
-        puts("");                                \
-    }
-
 typedef struct {
     ctet_board_t tet[16];
 } TetBoard;
@@ -35,19 +27,6 @@ void printfdebug(const char* fmt, ...) {
     printf("%s", msg);
     printf("\0338"); //return to og position
     fflush(stdout);
-}
-
-//only used for testing
-static void printtet(ctet_board_t* tet) {
-    printf("\0337");
-    printf("\033[20C");
-    for (int i=0; i<4; i++) {
-        for (int j=0; j<4; j++) {
-            printf("%d", CTET_TET_AT(tet, i, j));
-        }
-        printf("\033[4D\033[1B"); //go left 4, and down 1
-    }
-    printf("\0338");
 }
 
 static ctet_board_t tet_lr[TET_SIZE] = {
@@ -93,7 +72,6 @@ static ctet_board_t tet_dl[TET_SIZE] = {
     0,7,7,0,
 };
 static ctet_board_t* tetronimo_baselist[7] = {tet_lr, tet_ll, tet_sqr, tet_beam, tet_cross, tet_dr, tet_dl};
-
 
 static void draw_cur_tet_on_board(ctet_State* s) {
     for (int i=0; i<4; i++) {
@@ -320,7 +298,7 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
             ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0 && bval != 0) {
                 s->gamerunning = false;
-                return CTET_END_GAME;
+                return CTET_GAME_ENDED;
             }
         }
     }
@@ -403,6 +381,11 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             unstore_tet(s);
             break;
 
+        case CTET_END_GAME:
+            s->gamerunning = false;
+            result = CTET_GAME_ENDED;
+            break;
+
         case 0:
             break;
     }
@@ -465,5 +448,3 @@ void ctet_free_state(ctet_State* s) {
     free(s->board);
     if (s->malloced) free(s);
 }
-
-#undef PRINT_TET

@@ -13,6 +13,7 @@ typedef enum ctet_Action : unsigned char {
     CTET_INSTANT_DOWN,
     CTET_STORE_TETRONIMO,
     CTET_UNSTORE_TETRONIMO,
+    CTET_END_GAME,
 } ctet_Action;
 
 typedef enum ctet_Result : unsigned char {
@@ -20,7 +21,7 @@ typedef enum ctet_Result : unsigned char {
     CTET_PLACED_TETRONIMO,
     CTET_MOVED_TETRONIMO,
     CTET_MOVE_NOTALLOWED,
-    CTET_END_GAME,
+    CTET_GAME_ENDED,
 } ctet_Result;
 
 typedef struct ctet_Size {
