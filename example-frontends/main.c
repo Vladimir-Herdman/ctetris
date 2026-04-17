@@ -1,6 +1,3 @@
-//CURRENT BUGS
-//  - For some reason, clear_full_rows is getting called twice instead of once
-//    when a CTET_PLACED_TETRONIMO event occurs?
 #include <signal.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -163,12 +160,8 @@ int main() {
         //https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
         if (delta_milliseconds >= 1000) {
             update = update_state(state, MOVE_DOWN);
-            if (update == CTET_GAME_ENDED) {
-                game_ended();
-            }
-            else {
-                print_board(state);
-            }
+            if (update == CTET_GAME_ENDED) game_ended();
+            else print_board(state);
 
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }

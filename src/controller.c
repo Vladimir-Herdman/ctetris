@@ -371,6 +371,7 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case ' ':
         case CTET_INSTANT_DOWN:
             while ((result = ctet_update_state(s, CTET_MOVE_DOWN)) == CTET_MOVED_TETRONIMO);;
+            if (result == CTET_PLACED_TETRONIMO) return result;
             break;
 
         case CTET_STORE_TETRONIMO:
