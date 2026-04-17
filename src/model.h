@@ -1,7 +1,6 @@
 #ifndef CTETRIS_MODEL_H
 #define CTETRIS_MODEL_H
 
-#define NEXT_TET_LIST_SIZE 3
 #define TET_SIZE 16
 
 typedef enum ctet_Action : unsigned char {
@@ -35,8 +34,7 @@ typedef struct ctet_State {
     bool malloced;
     ctet_board_t* board;
     ctet_board_t cur_tet[TET_SIZE];
-    ctet_board_t next_tets[NEXT_TET_LIST_SIZE][TET_SIZE];
-    int next_tet_index;
+    ctet_board_t next_tets[3][TET_SIZE];
     ctet_Size cur_pos;
     int gravity;
     int score;

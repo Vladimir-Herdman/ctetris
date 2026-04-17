@@ -101,8 +101,9 @@ static void clear_full_rows(ctet_State* s) {
         if (count != s->size.cols) continue;
         while (--i > 0)
             memcpy(&CTET_BOARD_AT(s, i+1, 0), &CTET_BOARD_AT(s, i, 0), s->size.cols);
+        ++score_gained;
     }
-    s->score += score_gained+1; //TODO - remove the +1, just a temp for now until actual calculation.
+    s->score += score_gained; //TODO - remove the +1, just a temp for now until actual calculation.
 }
 
 //compare passed tet to board from s->curpos, and determine if it would
@@ -401,7 +402,7 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
 static void init_nexttets_list(ctet_State* s) {
     int random = rand() % 7;
     int last = -1;
-    for (int i=0; i<NEXT_TET_LIST_SIZE; i++) {
+    for (int i=0; i<3; i++) {
         if (random == last) random = rand() % 7; //only rerun once if duplicate to last piece
         memcpy(s->next_tets[i], tetronimo_baselist[random], TET_SIZE);
         last = random;
@@ -411,11 +412,11 @@ static void init_nexttets_list(ctet_State* s) {
 
 static void next_tet(ctet_State* s) {
     //use it like a queue with the next if statement.
-    memcpy(s->cur_tet, s->next_tets[++(s->next_tet_index)], TET_SIZE);
-    if (s->next_tet_index == 2) {
-        s->next_tet_index = -1;
-        init_nexttets_list(s);
-    }
+    memcpy(s->cur_tet, s->next_tets[0], TET_SIZE);
+    memcpy(s->next_tets[0], s->next_tets[1], TET_SIZE);
+    memcpy(s->next_tets[1], s->next_tets[2], TET_SIZE);
+    memcpy(s->next_tets[2], tetronimo_baselist[rand() % 7], TET_SIZE);
+    init_nexttets_list(s);
 }
 
 void ctet_init_state(ctet_State* s, const ctet_Size size) {
@@ -432,7 +433,6 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->gravity = 1;
     s->score = 0;
     s->level = 0;
-    s->next_tet_index = -1;
     init_nexttets_list(s);
     next_tet(s);
     move_down(s); //set's first tet on board at top
