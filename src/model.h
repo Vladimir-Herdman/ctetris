@@ -37,8 +37,9 @@ typedef struct ctet_State {
     ctet_board_t next_tets[NEXT_TET_LIST_SIZE][TET_SIZE];
     int next_tet_index;
     ctet_Size cur_pos;
-    int  gravity;
-    int  score;
+    int gravity;
+    int score;
+    int level;
     bool gamerunning;
 } ctet_State;
 

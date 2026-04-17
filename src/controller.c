@@ -7,11 +7,10 @@
 #include "controller.h"
 #include "model.h"
 
-#define TET_AT(tet, r, c) (tet)[4*(r)+(c)]
 #define PRINT_TET(tet)                           \
     for (int ti=0; ti<4; ti++) {                 \
         for (int tj=0; tj<4; tj++) {             \
-            printf("%d", TET_AT((tet), ti, tj)); \
+            printf("%d", CTET_TET_AT((tet), ti, tj)); \
         }                                        \
         puts("");                                \
     }
@@ -44,7 +43,7 @@ static void printtet(ctet_board_t* tet) {
     printf("\033[20C");
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            printf("%d", TET_AT(tet, i, j));
+            printf("%d", CTET_TET_AT(tet, i, j));
         }
         printf("\033[4D\033[1B"); //go left 4, and down 1
     }
@@ -99,7 +98,7 @@ static ctet_board_t* tetronimo_baselist[7] = {tet_lr, tet_ll, tet_sqr, tet_beam,
 static void draw_cur_tet_on_board(ctet_State* s) {
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            const ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             if (curval == 0) continue;
 
             CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j) = curval;
@@ -125,7 +124,7 @@ static void clear_full_rows(ctet_State* s) {
         while (--i > 0)
             memcpy(&CTET_BOARD_AT(s, i+1, 0), &CTET_BOARD_AT(s, i, 0), s->size.cols);
     }
-    s->score += score_gained;
+    s->score += score_gained+1; //TODO - remove the +1, just a temp for now until actual calculation.
 }
 
 //compare passed tet to board from s->curpos, and determine if it would
@@ -134,10 +133,10 @@ static void clear_full_rows(ctet_State* s) {
 static bool valid_on_board(const ctet_State* s, const ctet_board_t* tet) {
     for (int j=0; j<4; j++) { //get bottom '1' in each col, and check if any conflict in board below it.
         for (int i=3; i>=0; i--) {
-            const ctet_board_t tet_val = TET_AT(tet, i, j);
+            const ctet_board_t tet_val = CTET_TET_AT(tet, i, j);
             if (tet_val == 0) continue;
 
-            const ctet_board_t cur_tet_val = TET_AT(s->cur_tet, i, j);
+            const ctet_board_t cur_tet_val = CTET_TET_AT(s->cur_tet, i, j);
             const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (bval != 0 && cur_tet_val == 0) return false;
         }
@@ -154,7 +153,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
             if (s->cur_pos.rows+4 >= s->size.rows) return false;
             for (int j=0; j<4; j++) { //get bottom '1' in each col, and check if any conflict in board below it.
                 for (int i=3; i>=0; i--) {
-                    const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+                    const ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
@@ -168,7 +167,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
             if (s->cur_pos.cols-1 < 0) return false;
             for (int i=0; i<4; i++) { //get left '1' in each row, and check if any conflict in board left of it.
                 for (int j=0; j<4; j++) {
-                    const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+                    const ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j-1);
@@ -186,7 +185,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
             int srightcol = s->size.cols; //should always have a tet inside cur_tet, but just in case, assign over so next check fails.
             for (int j=3; j>=0; j--) {
                 for (int i=0; i<4; i++) {
-                    if (TET_AT(s->cur_tet, i, j) == 0) continue;
+                    if (CTET_TET_AT(s->cur_tet, i, j) == 0) continue;
                     srightcol = s->cur_pos.cols+j; //got the righernmost col, so now start the actual check
                     goto rightcheck;
                 }
@@ -196,7 +195,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
             if (srightcol+1 >= s->size.cols) return false;
             for (int i=0; i<4; i++) { //get right '1' in each row, and check if any conflict in board right of it.
                 for (int j=3; j>=0; j--) {
-                    const ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+                    const ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j+1);
@@ -212,7 +211,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
 static void clear_old_tet_loc(ctet_State* s) {
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0) *pbval = 0;
         }
@@ -223,7 +222,7 @@ static void move_down(ctet_State* s) {
     s->cur_pos.rows += 1;
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0) *pbval = curval;
         }
@@ -233,7 +232,7 @@ static void move_left(ctet_State* s) {
     s->cur_pos.cols -= 1;
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0) *pbval = curval;
         }
@@ -243,7 +242,7 @@ static void move_right(ctet_State* s) {
     s->cur_pos.cols += 1;
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             ctet_board_t* pbval = &CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0) *pbval = curval;
         }
@@ -254,9 +253,9 @@ static void move_right(ctet_State* s) {
 static void transpose_tet(ctet_board_t* tet) {
     for (int i=1; i<4; i++) {
         for (int j=0; j<i; j++) {
-            const ctet_board_t temp = TET_AT(tet, i, j);
-            TET_AT(tet, i, j) = TET_AT(tet, j, i);
-            TET_AT(tet, j, i) = temp;
+            const ctet_board_t temp = CTET_TET_AT(tet, i, j);
+            CTET_TET_AT(tet, i, j) = CTET_TET_AT(tet, j, i);
+            CTET_TET_AT(tet, j, i) = temp;
         }
     }
 }
@@ -269,9 +268,9 @@ static void rotate_tet_left(ctet_board_t* tet) {
     transpose_tet(tet);
     for (int i=0; i<4; i++) {
         for (int j=0; j<2; j++) {
-            const ctet_board_t temp = TET_AT(tet, i, j); //                             '  j  3-j  '
-            TET_AT(tet, i, j) = TET_AT(tet, i, 3-j); //3-j to get other side of row, so '0 1  0   0'
-            TET_AT(tet, i, 3-j) = temp;
+            const ctet_board_t temp = CTET_TET_AT(tet, i, j); //                             '  j  3-j  '
+            CTET_TET_AT(tet, i, j) = CTET_TET_AT(tet, i, 3-j); //3-j to get other side of row, so '0 1  0   0'
+            CTET_TET_AT(tet, i, 3-j) = temp;
         }
     }
 
@@ -281,24 +280,24 @@ static void rotate_tet_left(ctet_board_t* tet) {
     int shift_left = -1, shift_down = -1;
     for (int j=0; j<4 && shift_left<0; j++)
         for (int i=0; i<4; i++) 
-            if (TET_AT(tet, i, j) != 0) shift_left = j;
+            if (CTET_TET_AT(tet, i, j) != 0) shift_left = j;
     for (int i=3; i>=0 && shift_down<0; i--) 
         for (int j=0; j<4; j++) 
-            if (TET_AT(tet, i, j) != 0) shift_down = i;
+            if (CTET_TET_AT(tet, i, j) != 0) shift_down = i;
 
     //shift left and down
     for (int i=0; i<4 && shift_left>0; i++)
         for (int j=shift_left; j<4; j++)
-            TET_AT(tet, i, j-shift_left) = TET_AT(tet, i, j);
+            CTET_TET_AT(tet, i, j-shift_left) = CTET_TET_AT(tet, i, j);
     for (int i=shift_down; i>=0 && shift_down<3; i--)
         for (int j=0; j<4; j++) 
-            TET_AT(tet, i+(3-shift_down), j) = TET_AT(tet, i, j);
+            CTET_TET_AT(tet, i+(3-shift_down), j) = CTET_TET_AT(tet, i, j);
 
     //set shifts from end to 0s in array (so no old values left). I've found
     //this section alone works for the left rotation, but not for the right.
     //It's a large reason why I'm sticking with just left rotations, I was
     //having trouble with fixing the right.
-    for (int i=0; i<(3-shift_down); i++) memset(&TET_AT(tet, i, 0), 0, 4);
+    for (int i=0; i<(3-shift_down); i++) memset(&CTET_TET_AT(tet, i, 0), 0, 4);
 }
 
 static void store_tet(ctet_State* s) {
@@ -317,7 +316,7 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
     s->cur_pos = (ctet_Size){.rows=-1, .cols=s->size.cols/2};
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
-            ctet_board_t curval = TET_AT(s->cur_tet, i, j);
+            ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
             ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
             if (curval != 0 && bval != 0) {
                 s->gamerunning = false;
@@ -448,6 +447,7 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->gamerunning = true;
     s->gravity = 1;
     s->score = 0;
+    s->level = 0;
     s->next_tet_index = -1;
     init_nexttets_list(s);
     next_tet(s);
@@ -466,5 +466,4 @@ void ctet_free_state(ctet_State* s) {
     if (s->malloced) free(s);
 }
 
-#undef TET_AT
 #undef PRINT_TET

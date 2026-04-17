@@ -4,6 +4,7 @@
 #include "model.h"
 
 #define CTET_BOARD_AT(state, r, c) (state)->board[(state)->size.cols*(r)+(c)]
+#define CTET_TET_AT(tet, r, c) (tet)[4*(r)+(c)]
 
 void ctet_init_state(ctet_State* state, const ctet_Size size);
 ctet_State* ctet_new_state(const ctet_Size size);

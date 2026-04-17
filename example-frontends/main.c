@@ -1,3 +1,9 @@
+//CURRENT BUGS
+//  - I don't know why, but I gotta print twice to actually see the changes made
+//    to the next tet and score parts of the screen?
+//  - For some reason, clear_full_rows is getting called twice instead of once
+//    when a CTET_PLACED_TETRONIMO event occurs?
+#include <stdlib.h>
 #include <time.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -18,27 +24,29 @@
 
 #define get_timespec_ms(timespec) ((u64)(timespec).tv_sec * 1000ULL + (u64)(timespec).tv_nsec / 1000000ULL)
 #define diff_ms(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
+#define PRINT_STATE(s) for(int _=0; _<2; _++) print_board(s)
 
 #ifdef TEXTVIEW
-void print_board(const State* state) {
-    const Size size = state->size;
+void print_board(const State* s) {
     fputs("\033[38;2;200;200;200m", stdout);
 
+    //border outline
     static bool outline = true;
-    for (int i=0; i<size.rows+1 && outline; i++) {
-        for (int j=0; j<size.cols+2; j++) {
+    for (int i=0; i<s->size.rows+1 && outline; i++) {
+        for (int j=0; j<s->size.cols+2; j++) {
             fputs("▓▓", stdout);
         }
         putchar('\n');
     }
     if (outline) {
         outline = false;
-        printf("\033[%dA\033[2C", size.rows+1);
+        printf("\033[%dA\033[2C", s->size.rows+1);
     }
 
-    for (int i=0; i<size.rows; i++) {
-        for (int j=0; j<size.cols; j++) {
-            unsigned char bval = BOARD_AT(state, i, j);
+    //actual state board representation
+    for (int i=0; i<s->size.rows; i++) {
+        for (int j=0; j<s->size.cols; j++) {
+            unsigned char bval = BOARD_AT(s, i, j);
             switch (bval) {
                 case 0: printf("\033[38;2;0;0;0m");       break;
                 case 1: printf("\033[48;2;255;128;0m");   break;
@@ -53,7 +61,50 @@ void print_board(const State* state) {
         }
         fputs("\n\033[2C", stdout);
     }
-    printf("\033[%dA", size.rows); //Go up to start of print board
+    printf("\033[%dA", s->size.rows); //Go up to start of print board
+
+    //play information: level, score, next 3 tets, and store box
+    //TODO - complete store and unstore functionality
+    char buf[32] = {0};
+    fputs("\0337", stdout); //save current cursor pos
+    printf("\033[%dC", (s->size.cols+2)*2);
+
+    sprintf(buf, "level: %d", s->level);
+    printf("%s", buf);
+    printf("\033[%zuD\033[1B", strlen(buf));
+
+    sprintf(buf, "score: %d", s->score);
+    printf("%s", buf);
+    printf("\033[%zuD\033[2B", strlen(buf));
+
+    //TODO - make this print recursive so I don't need to put this switch here again.
+    fputs("next 3 tets:", stdout);
+    fputs("\033[12D\033[1B", stdout);
+    for (int t=0; t<3; t++) {
+        for (int i=0; i<4; i++) {
+            for (int j=0; j<4; j++) {
+                //TODO - Make next 3 tets update each time, so array changes properly for next 3.
+                //  Less efficient than current queue-like implementation, but it looks better
+                //  in terms of how one expects a game to work.
+                unsigned char tval = CTET_TET_AT(s->next_tets[t], i, j);
+                switch (tval) {
+                    case 0: printf("\033[38;2;0;0;0m");       break;
+                    case 1: printf("\033[48;2;255;128;0m");   break;
+                    case 2: printf("\033[48;2;0;0;255m");     break;
+                    case 3: printf("\033[48;2;255;255;0m");   break;
+                    case 4: printf("\033[48;2;0;255;255m");   break;
+                    case 5: printf("\033[48;2;153;0;204m");   break;
+                    case 6: printf("\033[48;2;0;255;0m");     break;
+                    case 7: printf("\033[48;2;255;0;0m");     break;
+                }
+                fputs("▓▓\033[0m", stdout);
+            }
+            fputs("\033[1B\033[8D", stdout);
+        }
+        fputs("\033[4A\033[10C", stdout);
+    }
+
+    fputs("\0338", stdout); //return to saved cursor pos
 }
 
 void setup_keypress_reading(struct termios* og_term, struct termios* ctet_term) {
@@ -72,7 +123,7 @@ int main() {
     State* state = new_state((Size){20, 10});
     char key_ch = 0;
     puts(""); //line above tetris game for debug printing
-    print_board(state);
+    PRINT_STATE(state);
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
@@ -84,7 +135,7 @@ int main() {
         read(STDIN_FILENO, &key_ch, 1);
         Result update = CTET_DO_NOTHING;
         if (key_ch != 0) update = update_state(state, key_ch);
-        if (update != CTET_DO_NOTHING) print_board(state);
+        if (update != CTET_DO_NOTHING) PRINT_STATE(state);
         if (key_ch == 'q' || update == CTET_END_GAME) goto endgame;
         if (key_ch == ' ' || key_ch == 'j' || update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
 
@@ -97,7 +148,7 @@ int main() {
                 state->gamerunning = false;
                 printf("\033[%dB", state->size.rows); //move below screen so don't erase board on game over
             }
-            else print_board(state);
+            else PRINT_STATE(state);
 
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
