@@ -3,6 +3,7 @@
 
 #include "model.h"
 
+#define CTET_GRID_AT(board, size, r, c) (board)[(size).cols*(r)+(c)]
 #define CTET_BOARD_AT(state, r, c) (state)->board[(state)->size.cols*(r)+(c)]
 #define CTET_TET_AT(tet, r, c) (tet)[4*(r)+(c)]
 

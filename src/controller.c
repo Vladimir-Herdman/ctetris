@@ -129,6 +129,7 @@ static bool valid_on_board(const ctet_State* s, const ctet_board_t* tet) {
 static bool move_allowed(const ctet_State* s, const ctet_Action action) {
     switch (action) {
         case CTET_MOVE_DOWN:
+            static int rtest = 0;
             if (s->cur_pos.rows+4 >= s->size.rows) return false;
             for (int j=0; j<4; j++) { //get bottom '1' in each col, and check if any conflict in board below it.
                 for (int i=3; i>=0; i--) {
@@ -296,7 +297,7 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
-            ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
+            ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
             if (curval != 0 && bval != 0) {
                 s->gamerunning = false;
                 return CTET_GAME_ENDED;
@@ -416,7 +417,7 @@ static void next_tet(ctet_State* s) {
     memcpy(s->next_tets[0], s->next_tets[1], TET_SIZE);
     memcpy(s->next_tets[1], s->next_tets[2], TET_SIZE);
     memcpy(s->next_tets[2], tetronimo_baselist[rand() % 7], TET_SIZE);
-    init_nexttets_list(s);
+    //init_nexttets_list(s);
 }
 
 void ctet_init_state(ctet_State* s, const ctet_Size size) {

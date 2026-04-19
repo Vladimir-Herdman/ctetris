@@ -21,27 +21,11 @@
 #define diff_ms(now_ts, last_ts) get_timespec_ms(now_ts) - get_timespec_ms(last_ts)
 
 #ifdef TEXTVIEW
-void print_board(const State* s) {
-    fputs("\033[38;2;200;200;200m", stdout);
-
-    //border outline
-    static bool outline = true;
-    for (int i=0; i<s->size.rows+1 && outline; i++) {
-        for (int j=0; j<s->size.cols+2; j++) {
-            fputs("▓▓", stdout);
-        }
-        putchar('\n');
-    }
-    if (outline) {
-        outline = false;
-        printf("\033[%dA\033[2C", s->size.rows+1);
-    }
-
-    //actual state board representation
-    for (int i=0; i<s->size.rows; i++) {
-        for (int j=0; j<s->size.cols; j++) {
-            unsigned char bval = BOARD_AT(s, i, j);
-            switch (bval) {
+void print_board(const board_t* board, const Size size) {
+    for (int i=0; i<size.rows; i++) {
+        for (int j=0; j<size.cols; j++) {
+            unsigned char val = CTET_GRID_AT(board, size, i, j);
+            switch (val) {
                 case 0: printf("\033[38;2;0;0;0m");       break;
                 case 1: printf("\033[48;2;255;128;0m");   break;
                 case 2: printf("\033[48;2;0;0;255m");     break;
@@ -53,11 +37,30 @@ void print_board(const State* s) {
             }
             fputs("▓▓\033[0m", stdout);
         }
-        fputs("\n\033[2C", stdout);
+        printf("\033[1B\033[%dD", size.cols*2);
     }
+}
+
+void print_state(State* s) {
+    //border, if not already printed
+    static bool outline = true;
+    fputs("\033[38;2;200;200;200m", stdout);
+    for (int i=0; i<s->size.rows+1 && outline; i++) {
+        for (int j=0; j<s->size.cols+2; j++) {
+            fputs("▓▓", stdout);
+        }
+        putchar('\n');
+    }
+    if (outline) {
+        outline = false;
+        printf("\033[%dA\033[2C", s->size.rows+1);
+    }
+
+    //board itself
+    print_board(s->board, s->size);
     printf("\033[%dA", s->size.rows); //Go up to start of print board
 
-    //play information: level, score, next 3 tets, and store box
+    //additional state info: level, score, next 3 tets, and store box
     //TODO - complete store and unstore functionality
     char buf[32] = {0};
     fputs("\0337", stdout); //save current cursor pos
@@ -71,34 +74,14 @@ void print_board(const State* s) {
     printf("%s", buf);
     printf("\033[%zuD\033[2B", strlen(buf));
 
-    //TODO - make this print recursive so I don't need to put this switch here again.
     fputs("next 3 tets:", stdout);
     fputs("\033[12D\033[1B", stdout);
-    for (int t=0; t<3; t++) {
-        for (int i=0; i<4; i++) {
-            for (int j=0; j<4; j++) {
-                //TODO - Make next 3 tets update each time, so array changes properly for next 3.
-                //  Less efficient than current queue-like implementation, but it looks better
-                //  in terms of how one expects a game to work.
-                unsigned char tval = CTET_TET_AT(s->next_tets[t], i, j);
-                switch (tval) {
-                    case 0: printf("\033[38;2;0;0;0m");       break;
-                    case 1: printf("\033[48;2;255;128;0m");   break;
-                    case 2: printf("\033[48;2;0;0;255m");     break;
-                    case 3: printf("\033[48;2;255;255;0m");   break;
-                    case 4: printf("\033[48;2;0;255;255m");   break;
-                    case 5: printf("\033[48;2;153;0;204m");   break;
-                    case 6: printf("\033[48;2;0;255;0m");     break;
-                    case 7: printf("\033[48;2;255;0;0m");     break;
-                }
-                fputs("▓▓\033[0m", stdout);
-            }
-            fputs("\033[1B\033[8D", stdout);
-        }
+
+    for (int i=0; i<3; i++) {
+        print_board(s->next_tets[i], (Size){4, 4});
         fputs("\033[4A\033[10C", stdout);
     }
 
-    //move cursor lower 
     fflush(stdout);
     fputs("\0338", stdout); //return to saved cursor pos
 }
@@ -137,7 +120,7 @@ int main() {
     state = new_state((Size){20, 10});
     char key_ch = 0;
     puts(""); //line above tetris game for debug printing
-    print_board(state);
+    print_state(state);
 
     struct timespec last_ts, now_ts;
     clock_gettime(CLOCK_MONOTONIC, &last_ts);
@@ -150,10 +133,14 @@ int main() {
         Result update = CTET_DO_NOTHING;
         if (key_ch != 0) {
             update = update_state(state, key_ch);
-            if (update == CTET_GAME_ENDED) game_ended();
+            if (update == CTET_GAME_ENDED) {
+                printfdebug("val:%c_r%dc%d", BOARD_AT(state, state->cur_pos.rows, state->cur_pos.cols), state->cur_pos.rows, state->cur_pos.cols);
+                print_state(state);
+                game_ended();
+            }
             if (update == CTET_PLACED_TETRONIMO) clock_gettime(CLOCK_MONOTONIC, &last_ts);
             if (key_ch == 'q') game_ended();
-            print_board(state);
+            print_state(state);
         }
 
         //for stack overflow timing reference?
@@ -161,7 +148,7 @@ int main() {
         if (delta_milliseconds >= 1000) {
             update = update_state(state, MOVE_DOWN);
             if (update == CTET_GAME_ENDED) game_ended();
-            else print_board(state);
+            else print_state(state);
 
             clock_gettime(CLOCK_MONOTONIC, &last_ts);
         }
