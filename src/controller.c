@@ -103,7 +103,7 @@ static void clear_full_rows(ctet_State* s) {
             memcpy(&CTET_BOARD_AT(s, i+1, 0), &CTET_BOARD_AT(s, i, 0), s->size.cols);
         ++score_gained;
     }
-    s->score += score_gained; //TODO - remove the +1, just a temp for now until actual calculation.
+    s->score += score_gained; //TODO - Actual score gain logic
 }
 
 //compare passed tet to board from s->curpos, and determine if it would
@@ -280,13 +280,6 @@ static void rotate_tet_left(ctet_board_t* tet) {
     for (int i=0; i<(3-shift_down); i++) memset(&CTET_TET_AT(tet, i, 0), 0, 4);
 }
 
-static void store_tet(ctet_State* s) {
-    return;
-}
-static void unstore_tet(ctet_State* s) {
-    return;
-}
-
 //This'll reset everything that needs to be reset for a new piece at the top.
 //It'll also be the check for if the game's over, as if there's already a piece
 //where we're trying to reset to, you've had too many pieces at the top, and game over.
@@ -306,6 +299,30 @@ static ctet_Result tetronimo_placed_reset(ctet_State* s) {
     }
     move_down(s);
     return CTET_PLACED_TETRONIMO;
+}
+
+static ctet_Result store_tet(ctet_State* s) {
+    for (int i=0; i<TET_SIZE; i++)
+        if (s->stored_tet[i] != 0) return CTET_MOVE_NOTALLOWED;
+
+    memcpy(s->stored_tet, s->cur_tet, TET_SIZE);
+    clear_old_tet_loc(s);
+    next_tet(s);
+    return CTET_MOVED_TETRONIMO;
+}
+static ctet_Result unstore_tet(ctet_State* s) {
+    int nonzero_count = 0;
+    for (int i=0; i<TET_SIZE; i++)
+        if (s->stored_tet[i] != 0) ++nonzero_count;
+    if (nonzero_count == 0) return CTET_MOVE_NOTALLOWED;
+
+    clear_old_tet_loc(s);
+    for (int i=2; i>=0; i--)
+        memcpy(s->next_tets[i+1], s->next_tets[i], TET_SIZE);
+    memcpy(s->next_tets[0], s->cur_tet, TET_SIZE);
+    memcpy(s->cur_tet, s->stored_tet, TET_SIZE);
+    memset(s->stored_tet, 0, TET_SIZE);
+    return CTET_MOVED_TETRONIMO;
 }
 
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
@@ -376,12 +393,16 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             if (result == CTET_PLACED_TETRONIMO) return result;
             break;
 
+        case 's':
         case CTET_STORE_TETRONIMO:
-            store_tet(s);
+            result = store_tet(s);
+            draw_cur_tet_on_board(s);
             break;
 
+        case 'u':
         case CTET_UNSTORE_TETRONIMO:
-            unstore_tet(s);
+            result = unstore_tet(s);
+            draw_cur_tet_on_board(s);
             break;
 
         case CTET_END_GAME:
@@ -403,7 +424,7 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
 static void init_nexttets_list(ctet_State* s) {
     int random = rand() % 7;
     int last = -1;
-    for (int i=0; i<3; i++) {
+    for (int i=0; i<4; i++) {
         if (random == last) random = rand() % 7; //only rerun once if duplicate to last piece
         memcpy(s->next_tets[i], tetronimo_baselist[random], TET_SIZE);
         last = random;
@@ -412,12 +433,10 @@ static void init_nexttets_list(ctet_State* s) {
 }
 
 static void next_tet(ctet_State* s) {
-    //use it like a queue with the next if statement.
     memcpy(s->cur_tet, s->next_tets[0], TET_SIZE);
-    memcpy(s->next_tets[0], s->next_tets[1], TET_SIZE);
-    memcpy(s->next_tets[1], s->next_tets[2], TET_SIZE);
-    memcpy(s->next_tets[2], tetronimo_baselist[rand() % 7], TET_SIZE);
-    //init_nexttets_list(s);
+    for (int i=0; i<3; i++)
+        memcpy(s->next_tets[i], s->next_tets[i+1], TET_SIZE);
+    memcpy(s->next_tets[3], tetronimo_baselist[rand() % 7], TET_SIZE);
 }
 
 void ctet_init_state(ctet_State* s, const ctet_Size size) {

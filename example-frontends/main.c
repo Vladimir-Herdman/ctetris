@@ -74,13 +74,16 @@ void print_state(State* s) {
     printf("%s", buf);
     printf("\033[%zuD\033[2B", strlen(buf));
 
-    fputs("next 3 tets:", stdout);
+    fputs("Next 3 tets:", stdout);
     fputs("\033[12D\033[1B", stdout);
 
     for (int i=0; i<3; i++) {
         print_board(s->next_tets[i], (Size){4, 4});
         fputs("\033[4A\033[10C", stdout);
     }
+
+    fputs("\033[5B\033[30DStored tet:\033[1B\033[11D", stdout);
+    print_board(s->stored_tet, (Size){4, 4});
 
     fflush(stdout);
     fputs("\0338", stdout); //return to saved cursor pos
@@ -128,9 +131,9 @@ int main() {
     while (state->gamerunning) {
         clock_gettime(CLOCK_MONOTONIC, &now_ts);
         u64 delta_milliseconds = diff_ms(now_ts, last_ts);
+        Result update = CTET_DO_NOTHING;
 
         read(STDIN_FILENO, &key_ch, 1);
-        Result update = CTET_DO_NOTHING;
         if (key_ch != 0) {
             update = update_state(state, key_ch);
             if (update == CTET_GAME_ENDED) {

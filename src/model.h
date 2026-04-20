@@ -34,7 +34,8 @@ typedef struct ctet_State {
     bool malloced;
     ctet_board_t* board;
     ctet_board_t cur_tet[TET_SIZE];
-    ctet_board_t next_tets[3][TET_SIZE];
+    ctet_board_t next_tets[4][TET_SIZE]; //additional 1 out for stored tet logic
+    ctet_board_t stored_tet[TET_SIZE];
     ctet_Size cur_pos;
     int gravity;
     int score;
