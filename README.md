@@ -4,50 +4,44 @@ ctetris
 Simply Tetris in the terminal, based off the Tetris seen in the movie 'Tetris,'
 i.e. just Tetris. How many times can this guy say Tetris?
 
+# Main Use
+I wanted to play around with making a project that can act as its own 'library'
+type deal, so `ctetris` is a tetris backend, while the frontend is up to you
+to create. I've got example frontends in the `example-frontends` directory
+(shocker), which has a terminal and ncurses example.
 
-# IDEA
-Model View Controller type project, so that code inner workings is behind
-scenes, and the view can be changed to fit backend (so frontend can change
-if needed)
+# Installation
+Just clone the repo to your local environment [it's not malware I swear ;)] and
+use your build system for a C project. This is just standard library C and POSIX
+functions, so I'll need to make it Windows compliant if you want to run it there.
 
-Maybe provide support for threading, so having more than one game at once
-through different arrays for each game? Could allow online multiplayer
-potential if different arrays/states/contexts are done?
+Otherwise, if you're Mac/Linux, just running `make` from the project root will
+build the binary `main` into the `bin` directory. Execute it from there or use
+`make run` to do both.
 
-## MODEL
-Data is essentially gonna be represented as an array, and potentially put it
-in a struct like `ctet_state` which will contain a pointer to the array, the
-current gravity, other data that'll be needed.
+## Frontend Examples
+There are two examples in this project:
+1) **terminal** (simple printing and ansi escape sequences)
+2) **ncurses** (to be done still)
 
-Handles data validation and is used by the controller to do stuff. Notifies
-view once changes have been made.
+Change a precompilation macro in the Makefile, specifically `CDEFS` to change
+which frontend example is created. `-DTEXTVIEW` is for the terminal only view
+(Mac/Linux/Windows), while leaving an empty macro entirely will create the
+ncurses view.
 
-There's a func like `ctet_update()` that'll just do all the updating based
-off accumulated moves every frame or so?
+The terminal one's simple and just prints the backend state each iteration to the
+screen, so as long as your terminal supports ANSI escape sequences, it'll look pretty.
 
-Functions for directly interacting with the data and changing stuff as
-needed by the controller.
-## VIEW
-This'll be through ncurses, though I think initial testing can take place
-within the terminal with printing (or make it an option or something I dunno)
+https://github.com/user-attachments/assets/39ddcfd2-c47d-415f-9476-618fc77da3f7
 
-Simply formats information from state and doesn't do any data handling/changing.
-## CONTROLLER
-Handles input from the user and processes it using the model. Will retreive or
-update data from the model.
+I'm still working on the ncurses one, I wanted to do it as a mini-lesson in how to
+use the library.
 
-The glue between the user and the rest of the application (taking what happens to the view
-and using user input to request changes of the model)
-
-# INCLUDE
-this is the public interface people will use with their view to actually create
-their own frontend for the system. We return state once requested (so the array),
-and the end user figures out how to present that information.
-
-We can also offer the `update()` type command to say 'hey, update the state' and we
-can share maybe a certain `context` or something with update to accumulate changes,
-like if a move has been made, a hold, or a restore.
-
-void ctet_update() -> update the state based off previous accumulated changes
-void ctet_action(enum) -> perform this action on the current state (MOVELEFT, MOVERIGHT, MOVEDOWN, HOLD, RESTORE)
-                       -> remember to call ctet_update() after all actions have been made to actually update the given state
+# TODO
+- Add a oneliner compilation line for if you don't want to use `make`.
+- Windows version of code.
+- ncurses version of code.
+- Confirm `ctetris` api looks clean/understandable.
+- Clean up example frontend main file.
+- Make option for each frontend.
+- Make option for just the `ctetris` library (get rid of anything else/`.dll`s?).
