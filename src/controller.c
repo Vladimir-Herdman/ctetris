@@ -109,7 +109,8 @@ static void clear_full_rows(ctet_State* s) {
     }
 
     //My own addition is multiplying the gained score by the current level.
-    s->rows_cleared = row_count;
+    s->rows_last_cleared = row_count;
+    s->lines_cleared_total += row_count;
     s->score += score_gained * s->level;
 }
 
@@ -335,7 +336,9 @@ static ctet_Result unstore_tet(ctet_State* s) {
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
     ctet_Result result = CTET_DO_NOTHING;
     TetBoard tb;
-    s->rows_cleared = 0;
+    s->rows_last_cleared = 0;
+
+    s->level = (s->lines_cleared_total / 4) + 1;
 
     switch (action) {
         case 'j':
@@ -400,8 +403,8 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case CTET_HARD_DOWN:
             while ((result = ctet_update_state(s, CTET_MOVE_DOWN)) == CTET_MOVED_TETRONIMO);;
             if (result == CTET_PLACED_TETRONIMO) {
-                if (s->rows_cleared > 0) //bonus for hard dropping and clearing a row.
-                    s->score += (s->rows_cleared + 1) * s->level;
+                if (s->rows_last_cleared > 0) //bonus for hard dropping and clearing a row.
+                    s->score += (s->rows_last_cleared + 1) * s->level;
                 return result;
             }
             break;
@@ -443,11 +446,22 @@ static void init_nexttets_list(ctet_State* s) {
     }
 }
 
+static bool already_upnext(const ctet_State* s, const ctet_board_t* tet) {
+    for (int i=0; i<3; i++) {
+        if (memcmp(s->next_tets[i], tet, TET_SIZE) == 0) return true;
+    }
+    return false;
+}
+
 static void next_tet(ctet_State* s) {
     memcpy(s->cur_tet, s->next_tets[0], TET_SIZE);
     for (int i=0; i<3; i++)
         memcpy(s->next_tets[i], s->next_tets[i+1], TET_SIZE);
-    memcpy(s->next_tets[3], tetronimo_baselist[rand() % 7], TET_SIZE);
+
+    int random;
+    while (already_upnext(s, tetronimo_baselist[ (random=rand()%7) ]))
+        ;;
+    memcpy(s->next_tets[3], tetronimo_baselist[random], TET_SIZE);
 }
 
 int ctet_update_time(const ctet_State* s) {
@@ -468,7 +482,8 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->gamerunning = true;
     s->score = 0;
     s->level = 1;
-    s->rows_cleared = 0; //used to determine if last move cleared rows or not, and how many.
+    s->rows_last_cleared = 0; //used to determine if last move cleared rows or not, and how many.
+    s->lines_cleared_total = 0; //used to determine if last move cleared rows or not, and how many.
     init_nexttets_list(s);
     next_tet(s);
     move_down(s); //set's first tet on board at top

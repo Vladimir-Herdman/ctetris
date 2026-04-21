@@ -37,11 +37,11 @@ typedef struct ctet_State {
     ctet_board_t next_tets[4][TET_SIZE]; //additional 1 out for stored tet logic
     ctet_board_t stored_tet[TET_SIZE];
     ctet_Size cur_pos;
-    int gravity;
     int score;
     int level;
     bool gamerunning;
-    int rows_cleared;
+    int rows_last_cleared;
+    int lines_cleared_total;
 } ctet_State;
 
 #endif //CTETRIS_MODEL_H
