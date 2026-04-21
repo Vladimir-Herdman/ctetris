@@ -86,24 +86,30 @@ static void draw_cur_tet_on_board(ctet_State* s) {
 
 //TODO - finish this method
 static void clear_full_rows(ctet_State* s) {
-    int score_gained=0, count;
+    int score_gained=0, nonzero_count, row_count=0;
     for (int i=0; i<s->size.rows; i++) {
         if (CTET_BOARD_AT(s, i, 0) == 0) continue;
-        count = 0;
+        nonzero_count = 0;
         for (int j=0; j<s->size.cols; j++)
-            if (CTET_BOARD_AT(s, i, j) != 0) ++count;
+            if (CTET_BOARD_AT(s, i, j) != 0) ++nonzero_count;
 
-        //TODO - Currently, after a single row is cleaned, it moves everything above
-        //it down. Would probably be more efficient if you could figure out a way to
-        //remove all lines that are full in a block, and then memcpy or something.
-        //So, a block memcpy based off the number of lines in a row, so not 1 at a
-        //time 4 times in a row for a big clear.
-        if (count != s->size.cols) continue;
+        if (nonzero_count != s->size.cols) continue;
         while (--i > 0)
             memcpy(&CTET_BOARD_AT(s, i+1, 0), &CTET_BOARD_AT(s, i, 0), s->size.cols);
-        ++score_gained;
+        ++row_count;
     }
-    s->score += score_gained; //TODO - Actual score gain logic
+
+    //from wiki for the 1988 version of the game's score system.
+    switch (row_count) {
+        case 1: score_gained += 40; break;
+        case 2: score_gained += 100; break;
+        case 3: score_gained += 300; break;
+        case 4: score_gained += 1200; break;
+    }
+
+    //My own addition is multiplying the gained score by the current level.
+    s->rows_cleared = row_count;
+    s->score += score_gained * s->level;
 }
 
 //compare passed tet to board from s->curpos, and determine if it would
@@ -328,6 +334,8 @@ static ctet_Result unstore_tet(ctet_State* s) {
 ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
     ctet_Result result = CTET_DO_NOTHING;
     TetBoard tb;
+    s->rows_cleared = 0;
+
     switch (action) {
         case 'j':
         case CTET_MOVE_DOWN:
@@ -388,9 +396,13 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             break;
 
         case ' ':
-        case CTET_INSTANT_DOWN:
+        case CTET_HARD_DOWN:
             while ((result = ctet_update_state(s, CTET_MOVE_DOWN)) == CTET_MOVED_TETRONIMO);;
-            if (result == CTET_PLACED_TETRONIMO) return result;
+            if (result == CTET_PLACED_TETRONIMO) {
+                if (s->rows_cleared > 0) //bonus for hard dropping and clearing a row.
+                    s->score += (s->rows_cleared + 1) * s->level;
+                return result;
+            }
             break;
 
         case 's':
@@ -409,10 +421,8 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
             s->gamerunning = false;
             result = CTET_GAME_ENDED;
             break;
-
-        case 0:
-            break;
     }
+
     if (result == CTET_PLACED_TETRONIMO) {
         clear_old_tet_loc(s);
         clear_full_rows(s);
@@ -452,7 +462,8 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->gamerunning = true;
     s->gravity = 1;
     s->score = 0;
-    s->level = 0;
+    s->level = 1;
+    s->rows_cleared = 0; //used to determine if last move cleared rows or not, and how many.
     init_nexttets_list(s);
     next_tet(s);
     move_down(s); //set's first tet on board at top

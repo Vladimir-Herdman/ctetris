@@ -9,7 +9,7 @@ typedef enum ctet_Action : unsigned char {
     CTET_MOVE_RIGHT,
     CTET_ROTATE_LEFT,
     CTET_ROTATE_RIGHT,
-    CTET_INSTANT_DOWN,
+    CTET_HARD_DOWN,
     CTET_STORE_TETRONIMO,
     CTET_UNSTORE_TETRONIMO,
     CTET_END_GAME,
@@ -41,6 +41,7 @@ typedef struct ctet_State {
     int score;
     int level;
     bool gamerunning;
+    int rows_cleared;
 } ctet_State;
 
 #endif //CTETRIS_MODEL_H
