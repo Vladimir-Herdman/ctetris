@@ -1,3 +1,4 @@
+#include "controller.h"
 #include <signal.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -148,7 +149,7 @@ int main() {
 
         //for stack overflow timing reference?
         //https://gamedev.stackexchange.com/questions/159835/understanding-tetris-speed-curve
-        if (delta_milliseconds >= 1000) {
+        if (delta_milliseconds >= ctet_update_time(state)) {
             update = update_state(state, MOVE_DOWN);
             if (update == CTET_GAME_ENDED) game_ended();
             else print_state(state);
@@ -157,7 +158,7 @@ int main() {
         }
 
         key_ch = 0;
-        nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=25000000}, NULL); //about 34-35 frames per second
+        nanosleep(&(struct timespec){.tv_sec=0, .tv_nsec=14000000}, NULL); //about 60 frames per second in my testing
     }
 
     game_ended();

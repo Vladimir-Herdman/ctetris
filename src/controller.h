@@ -18,6 +18,7 @@ void ctet_free_state(ctet_State* state);
 //  <up><down><left><right> -> arrow keys for CTET_MOVE_<direction>
 //TODO: Set some keys for relevant options later on
 ctet_Result ctet_update_state(ctet_State* state, ctet_Action action);
+int ctet_update_time(const ctet_State* state);
 
 void printfdebug(const char* fmt, ...);
 

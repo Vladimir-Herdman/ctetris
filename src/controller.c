@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -449,6 +450,11 @@ static void next_tet(ctet_State* s) {
     memcpy(s->next_tets[3], tetronimo_baselist[rand() % 7], TET_SIZE);
 }
 
+int ctet_update_time(const ctet_State* s) {
+    //formula modified from: https://tetris.fandom.com/wiki/Tetris_Worlds
+    return pow((0.82-((s->level - 1.0) * 0.009)), (s->level - 1))*1000;
+}
+
 void ctet_init_state(ctet_State* s, const ctet_Size size) {
     static bool srand_called = false;
     if (srand_called == false) {
@@ -460,7 +466,6 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->cur_pos = (ctet_Size){.rows=-1, .cols=size.cols/2};
     s->malloced = false;
     s->gamerunning = true;
-    s->gravity = 1;
     s->score = 0;
     s->level = 1;
     s->rows_cleared = 0; //used to determine if last move cleared rows or not, and how many.
