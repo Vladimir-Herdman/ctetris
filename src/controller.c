@@ -74,7 +74,40 @@ static ctet_board_t tet_dl[TET_SIZE] = {
 };
 static ctet_board_t* tetronimo_baselist[7] = {tet_lr, tet_ll, tet_sqr, tet_beam, tet_cross, tet_dr, tet_dl};
 
+static void draw_predicted_cur_tet(ctet_State* s) {
+    //TODO: Make loop just check bottom 0<x<8 and not every cell.
+    int row_to_draw;
+    for (row_to_draw=s->cur_pos.rows+1; row_to_draw<s->size.rows; row_to_draw++) {
+        for (int ti=0; ti<4; ti++) {
+            for (int tj=0; tj<4; tj++) {
+                const ctet_board_t predval = CTET_TET_AT(s->cur_tet, ti, tj);
+                if (predval == 0) continue;
+
+                const ctet_board_t bval = CTET_BOARD_AT(s, row_to_draw+ti, s->cur_pos.cols+tj);
+                if (bval > 0 && bval < 8) {
+                    row_to_draw -= 1;
+                    goto draw;
+                }
+            }
+        }
+
+        if (row_to_draw == s->size.rows-4) {
+            goto draw;
+        }
+    }
+    row_to_draw -= 4;
+
+    draw:
+    for (int i=0; i<4; i++) {
+        for (int j=0; j<4; j++) {
+            if (CTET_TET_AT(s->cur_tet, i, j) == 0) continue;
+            CTET_BOARD_AT(s, row_to_draw+i, s->cur_pos.cols+j) = 8;
+        }
+    }
+}
+
 static void draw_cur_tet_on_board(ctet_State* s) {
+    draw_predicted_cur_tet(s);
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             const ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
@@ -125,7 +158,7 @@ static bool valid_on_board(const ctet_State* s, const ctet_board_t* tet) {
 
             const ctet_board_t cur_tet_val = CTET_TET_AT(s->cur_tet, i, j);
             const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j);
-            if (bval != 0 && cur_tet_val == 0) return false;
+            if (bval > 0 && bval < 8 && cur_tet_val == 0) return false;
         }
     }
     return true;
@@ -145,7 +178,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i+1, s->cur_pos.cols+j);
-                    if (bval != 0) return false;
+                    if (bval > 0 && bval < 8) return false;
                     break;
                 }
             }
@@ -159,7 +192,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j-1);
-                    if (bval != 0) return false;
+                    if (bval > 0 && bval < 8) return false;
                     break;
                 }
             }
@@ -187,7 +220,7 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
                     if (curval == 0) continue;
 
                     const ctet_board_t bval = CTET_BOARD_AT(s, s->cur_pos.rows+i, s->cur_pos.cols+j+1);
-                    if (bval != 0) return false;
+                    if (bval > 0 && bval < 8) return false;
                     break;
                 }
             }
@@ -196,7 +229,17 @@ static bool move_allowed(const ctet_State* s, const ctet_Action action) {
     return true;
 }
 
+static void clear_old_predicted_cur_tet(ctet_State* s) {
+    for (int i=0; i<s->size.rows; i++) {
+        for (int j=0; j<4; j++) {
+            ctet_board_t* pbval = &CTET_BOARD_AT(s, i, s->cur_pos.cols+j);
+            if (*pbval == 8) *pbval = 0;
+        }
+    }
+}
+
 static void clear_old_tet_loc(ctet_State* s) {
+    clear_old_predicted_cur_tet(s);
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
@@ -208,6 +251,7 @@ static void clear_old_tet_loc(ctet_State* s) {
 
 static void move_down(ctet_State* s) {
     s->cur_pos.rows += 1;
+    draw_predicted_cur_tet(s);
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
@@ -218,6 +262,7 @@ static void move_down(ctet_State* s) {
 }
 static void move_left(ctet_State* s) {
     s->cur_pos.cols -= 1;
+    draw_predicted_cur_tet(s);
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
@@ -228,6 +273,7 @@ static void move_left(ctet_State* s) {
 }
 static void move_right(ctet_State* s) {
     s->cur_pos.cols += 1;
+    draw_predicted_cur_tet(s);
     for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
             ctet_board_t curval = CTET_TET_AT(s->cur_tet, i, j);
@@ -337,7 +383,6 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
     ctet_Result result = CTET_DO_NOTHING;
     TetBoard tb;
     s->rows_last_cleared = 0;
-
     s->level = (s->lines_cleared_total / 4) + 1;
 
     switch (action) {
@@ -413,6 +458,7 @@ ctet_Result ctet_update_state(ctet_State* s, const ctet_Action action) {
         case CTET_STORE_TETRONIMO:
             result = store_tet(s);
             draw_cur_tet_on_board(s);
+            //clear_old_predicted_cur_tet(s);
             break;
 
         case 'u':
@@ -483,7 +529,7 @@ void ctet_init_state(ctet_State* s, const ctet_Size size) {
     s->score = 0;
     s->level = 1;
     s->rows_last_cleared = 0; //used to determine if last move cleared rows or not, and how many.
-    s->lines_cleared_total = 0; //used to determine if last move cleared rows or not, and how many.
+    s->lines_cleared_total = 0;
     init_nexttets_list(s);
     next_tet(s);
     move_down(s); //set's first tet on board at top

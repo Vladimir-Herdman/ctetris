@@ -1,3 +1,7 @@
+/*TODO
+ *  Make it so when a piece rotates on the edge of the board, it doesn't appear on the opposite side, so push it out
+ *  Make a buffer of space above the board so that pieces can go up when normal placement would conflict
+ */
 #include <signal.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -34,6 +38,7 @@ void print_board(const board_t* board, const Size size) {
                 case 5: printf("\033[48;2;153;0;204m");   break;
                 case 6: printf("\033[48;2;0;255;0m");     break;
                 case 7: printf("\033[48;2;255;0;0m");     break;
+                case 8: printf("\033[48;2;255;255;255m"); break;
             }
             fputs("▓▓\033[0m", stdout);
         }
@@ -137,7 +142,6 @@ int main() {
         if (key_ch != 0) {
             update = update_state(state, key_ch);
             if (update == CTET_GAME_ENDED) {
-                printfdebug("val:%c_r%dc%d", BOARD_AT(state, state->cur_pos.rows, state->cur_pos.cols), state->cur_pos.rows, state->cur_pos.cols);
                 print_state(state);
                 game_ended();
             }
